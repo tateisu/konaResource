@@ -46,32 +46,38 @@ konaResource{
 ## cliの使用
 Run the CLI with `./gradlew :cli:run --args='list archive.bin'`.
 
-## GitHub Packages からの利用
-`common`、`reader`、Gradle plugin は GitHub Packages の Maven repository に公開されます。
-GitHub Packages は取得にも認証が必要なため、`GITHUB_ACTOR` と `GITHUB_TOKEN`（`read:packages` 権限）を設定してください。
+## JitPack からの利用
+`common`、`reader`、Gradle plugin は JitPack から取得できます。JitPack は GitHub の tag から artifact をビルドするため、認証は不要です。
+
+`sample1` はデフォルトで公開 artifact を使用します。プロジェクトを開発するときだけ、`-PuseLocalArtifacts=true` を指定すると plugin と reader に兄弟モジュールを使用します。
 
 ```kotlin
 pluginManagement {
     repositories {
         maven {
-            url = uri("https://maven.pkg.github.com/tateisu/konaResource")
-            credentials {
-                username = providers.environmentVariable("GITHUB_ACTOR").get()
-                password = providers.environmentVariable("GITHUB_TOKEN").get()
+            url = uri("https://jitpack.io")
+            content {
+                includeGroup("com.github.tateisu.konaResource")
             }
         }
         gradlePluginPortal()
         mavenCentral()
+    }
+    resolutionStrategy {
+        eachPlugin {
+            if (requested.id.id == "jp.juggler.konaResource") {
+                useModule("com.github.tateisu.konaResource:plugin:${requested.version}")
+            }
+        }
     }
 }
 
 dependencyResolutionManagement {
     repositories {
         maven {
-            url = uri("https://maven.pkg.github.com/tateisu/konaResource")
-            credentials {
-                username = providers.environmentVariable("GITHUB_ACTOR").get()
-                password = providers.environmentVariable("GITHUB_TOKEN").get()
+            url = uri("https://jitpack.io")
+            content {
+                includeGroup("com.github.tateisu.konaResource")
             }
         }
         mavenCentral()
@@ -79,13 +85,13 @@ dependencyResolutionManagement {
 }
 
 plugins {
-    id("jp.juggler.konaResource") version "0.1.0"
+    id("jp.juggler.konaResource") version "v0.1.1"
 }
 
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("dev.kona.resource:reader:0.1.0")
+            implementation("com.github.tateisu.konaResource:reader:v0.1.1")
         }
     }
 }

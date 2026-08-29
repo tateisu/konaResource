@@ -17,7 +17,7 @@ kotlin {
 }
 
 dependencies {
-    implementation("dev.kona.resource:common:0.1.0")
+    implementation("dev.kona.resource:common:0.1.1")
     implementation(libs.kotlinxCoroutinesCore)
     compileOnly(libs.kotlinGradlePluginLib)
     testImplementation(gradleTestKit())

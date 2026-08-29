@@ -1,6 +1,6 @@
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-    id("jp.juggler.konaResource")
+    id("jp.juggler.konaResource") version "v0.1.1"
 }
 
 konaResource {
@@ -18,7 +18,11 @@ kotlin {
     }
     sourceSets {
         linuxX64Main.dependencies {
-            implementation(project(":reader"))
+            if (providers.gradleProperty("useLocalArtifacts").map(String::toBoolean).getOrElse(false)) {
+                implementation(project(":reader"))
+            } else {
+                implementation("com.github.tateisu.konaResource:reader:v0.1.1")
+            }
         }
     }
 }
