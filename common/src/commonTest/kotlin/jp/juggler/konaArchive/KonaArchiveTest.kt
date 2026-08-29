@@ -39,6 +39,7 @@ class KonaArchiveTest : FreeSpec({
                 contents["html/index.html"]!!.toList() shouldBe "hello hello hello".encodeToByteArray().toList()
                 contents["same/b.bin"]!!.toList() shouldBe byteArrayOf(1, 2, 3).toList()
                 contents["empty"]!!.toList() shouldBe emptyList()
+                (archive.root.getPath("html/index.html") as KonaArchiveFile).verifySha256()
             }
         } finally {
             utils.deleteTree(root)
@@ -80,6 +81,29 @@ class KonaArchiveTest : FreeSpec({
             utils.deleteTree(secondRoot)
             utils.deleteFile(firstArchivePath)
             utils.deleteFile(secondArchivePath)
+        }
+    }
+
+    "emptyDirectoriesRoundTrip" {
+        val root = utils.tempDirectory("empty-directory")
+        val archivePath = utils.tempArchive("empty-directory")
+        try {
+            utils.encodeDirectory(root, archivePath)
+            utils.decodeArchive(archivePath).use { archive ->
+                archive.root.size shouldBe 0
+            }
+
+            val emptyDirectory = utils.resolve(root, "empty")
+            utils.writeFile(utils.resolve(emptyDirectory, ".keep"), ByteArray(0))
+            utils.deleteFile(utils.resolve(emptyDirectory, ".keep"))
+
+            utils.encodeDirectory(root, archivePath)
+            utils.decodeArchive(archivePath).use { archive ->
+                (archive.root["empty"] as KonaArchiveDir).size shouldBe 0
+            }
+        } finally {
+            utils.deleteTree(root)
+            utils.deleteFile(archivePath)
         }
     }
 })

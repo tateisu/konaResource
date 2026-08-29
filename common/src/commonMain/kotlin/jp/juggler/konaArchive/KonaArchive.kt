@@ -1,11 +1,15 @@
 package jp.juggler.konaArchive
 
 import jp.juggler.konaArchive.util.KonaRandomAccess
+import jp.juggler.konaArchive.util.defaultKonaSha256
 import jp.juggler.konaArchive.util.defaultLz4Codec
+import jp.juggler.konaArchive.util.rangeSha256
 import okio.Buffer
 
 internal const val KONA_ARCHIVE_MAGIC: Int = 0x0123CDEF
 internal const val KONA_ARCHIVE_VERSION: Int = 1
+internal const val KONA_ARCHIVE_CONTENT_META_SIZE: Int = 3 * 4 + 2 * 32
+internal const val KONA_ARCHIVE_DIR_ITEM_SIZE: Int = 12
 internal const val DIR_FLAG = 0x80000000.toInt()
 internal const val DIR_MASK = DIR_FLAG.inv()
 
@@ -37,7 +41,7 @@ class KonaArchiveFile(
     val compressedStart: Int,
     val compressedSize: Int,
     val uncompressedSize: Int,
-    // Note: 現時点ではコンテンツごとのSHA256検証は実装されていない
+    // verifySha256() で圧縮前後のデータを検証する
     val compressedSha256: ByteArray,
     val uncompressedSha256: ByteArray,
 ) : KonaArchiveEntry() {
@@ -47,6 +51,7 @@ class KonaArchiveFile(
 
     /**
      * コンテンツをデコードする。内容は順次 callbackに渡される。
+     * SHA256 の検証は行わない。
      */
     fun content(
         callback: (Buffer) -> Unit = {}
@@ -73,6 +78,26 @@ class KonaArchiveFile(
                 }
             },
         )
+    }
+
+    /**
+     * 圧縮データと展開データのSHA256を検証する。
+     * content() と異なり、検証のために圧縮データの読み込みと展開を行う。
+     */
+    fun verifySha256() {
+        val compressedDigest = openCompressed().use { it.rangeSha256() }
+        require(compressedDigest.contentEquals(compressedSha256)) {
+            "compressed content digest mismatch: $name"
+        }
+        val uncompressedDigest = with(defaultKonaSha256()) {
+            content { buffer ->
+                update(buffer.readByteArray())
+            }
+            finish()
+        }
+        require(uncompressedDigest.contentEquals(uncompressedSha256)) {
+            "uncompressed content digest mismatch: $name"
+        }
     }
 
     /**
@@ -108,7 +133,7 @@ class KonaArchiveFile(
 }
 
 /**
- * KonaArchiveのディレクトリ中のファイル
+ * KonaArchiveのディレクトリ
  */
 class KonaArchiveDir(
     override val name: String,
@@ -125,11 +150,17 @@ class KonaArchiveDir(
     private val _indices = 0 until dirCount
 
     init {
-        check(dirIndex in dirItemsRange) {
-            "dirIndex=${dirIndex} must in $dirItemsRange"
-        }
-        check(dirIndex + dirCount - 1 in dirItemsRange) {
-            "dirIndex+dirCount-1=${dirIndex + dirCount - 1} must in $dirItemsRange"
+        require(dirIndex >= 0) { "dirIndex must not be negative: $dirIndex" }
+        require(dirCount >= 0) { "dirCount must not be negative: $dirCount" }
+        if (dirCount == 0) {
+            require(dirIndex == 0) { "empty directory must have dirIndex=0: $dirIndex" }
+        } else {
+            check(dirIndex in dirItemsRange) {
+                "dirIndex=${dirIndex} must in $dirItemsRange"
+            }
+            check(dirIndex.toLong() + dirCount <= dirItemsRange.last.toLong() + 1L) {
+                "directory range [$dirIndex, ${dirIndex + dirCount}) must in $dirItemsRange"
+            }
         }
     }
 
@@ -147,7 +178,7 @@ class KonaArchiveDir(
         // dirItems配列全体に対するインデクス
         val index = dirIndex + i
         if (index !in dirItemsRange) error("readEntry: index $index must in $dirItemsRange")
-        seek(dirItemsStart + 12L * index)
+        seek(dirItemsStart + KONA_ARCHIVE_DIR_ITEM_SIZE.toLong() * index)
         val i0 = readInt32("entry-i0")
         val i1 = readInt32("entry-i1")
         val i2 = readInt32("entry-i2")
@@ -176,7 +207,7 @@ class KonaArchiveDir(
         // dirItems配列全体に対するインデクス
         val index = dirIndex + i
         if (index !in dirItemsRange) error("readEntry: index $index must in $dirItemsRange")
-        seek(dirItemsStart + 12L * index)
+        seek(dirItemsStart + KONA_ARCHIVE_DIR_ITEM_SIZE.toLong() * index)
         val i0 = readInt32("entry-i0")
         readNameString(i0)
     }

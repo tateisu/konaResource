@@ -16,6 +16,9 @@ import org.gradle.work.DisableCachingByDefault
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import java.io.File
+import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import javax.inject.Inject
 
 @Suppress("unused")
@@ -72,12 +75,24 @@ abstract class GenerateKonaResourceTask @Inject constructor(
                 require(writerRoot is KonaWriterDirectory) { "Kona Resource input is not a directory: $inputDirectory" }
                 val safeName = name.replace(Regex("[^A-Za-z0-9_]"), "_")
                 val archiveFile = output.resolve("$safeName.bin")
-                openPreviousArchive(archiveFile).use { previous ->
-                    FileRandomAccess(archiveFile).encodeKonaArchive(
-                        root = writerRoot,
-                        options = sourceExtension.options(),
-                        previous = previous,
-                    )
+                val temporaryArchive = Files.createTempFile(
+                    output.toPath(),
+                    ".${archiveFile.name}.",
+                    ".tmp",
+                ).toFile()
+                try {
+                    openPreviousArchive(archiveFile).use { previous ->
+                        FileRandomAccess(temporaryArchive).use { access ->
+                            access.encodeKonaArchive(
+                                root = writerRoot,
+                                options = sourceExtension.options(),
+                                previous = previous,
+                            )
+                        }
+                    }
+                    replaceArchive(temporaryArchive, archiveFile)
+                } finally {
+                    temporaryArchive.delete()
                 }
                 val assembly = output.resolve("$safeName.S")
                 val symbol = "konaResource_${safeName}"
@@ -103,6 +118,23 @@ abstract class GenerateKonaResourceTask @Inject constructor(
                     )
                 })
             }
+        }
+    }
+
+    private fun replaceArchive(source: File, target: File) {
+        try {
+            Files.move(
+                source.toPath(),
+                target.toPath(),
+                StandardCopyOption.ATOMIC_MOVE,
+                StandardCopyOption.REPLACE_EXISTING,
+            )
+        } catch (_: AtomicMoveNotSupportedException) {
+            Files.move(
+                source.toPath(),
+                target.toPath(),
+                StandardCopyOption.REPLACE_EXISTING,
+            )
         }
     }
 

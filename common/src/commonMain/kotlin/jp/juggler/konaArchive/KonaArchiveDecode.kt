@@ -26,8 +26,9 @@ fun KonaRandomAccess.decodeKonaArchive(): KonaArchive {
     val headerSha256 = readBytes(32, "headerSha256")
     val headerSize = 7 * 4 + 3 * 32
     val headerStart = headerEnd - headerSize
+    require(headerStart >= 4L) { "header starts before the magic" }
     seek(headerStart)
-    readInt32("header.compressedDataStart")
+    val compressedDataStart = readInt32("header.compressedDataStart").toLong()
     val contentMetaStart = readInt32("header.contentMetaStart").toLong()
     val contentMetaSha256 = readBytes(32, "header.contentMetaSha256")
     val namesStart = readInt32("header.namesStart").toLong()
@@ -37,6 +38,29 @@ fun KonaRandomAccess.decodeKonaArchive(): KonaArchive {
     val dirItemsSha256 = readBytes(32, "header.dirItemsSha256")
     val rootDirIndex = readInt32("header.rootDirIndex")
     val rootDirSize = readInt32("header.rootDirSize")
+    require(compressedDataStart in 4L..contentMetaStart) {
+        "invalid compressedData range: $compressedDataStart..$contentMetaStart"
+    }
+    require(contentMetaStart <= namesStart && namesStart <= dirItemsStart && dirItemsStart <= headerStart) {
+        "archive sections are out of order"
+    }
+    require((namesStart - contentMetaStart) % KONA_ARCHIVE_CONTENT_META_SIZE == 0L) {
+        "contentMeta section has an incomplete entry"
+    }
+    require(dirItemsCount >= 0) { "dirItemsCount must not be negative: $dirItemsCount" }
+    require(headerStart - dirItemsStart == dirItemsCount.toLong() * KONA_ARCHIVE_DIR_ITEM_SIZE) {
+        "dirItems section size does not match dirItemsCount"
+    }
+    require(rootDirIndex >= 0 && rootDirSize >= 0) {
+        "root directory range must not be negative"
+    }
+    if (rootDirSize == 0) {
+        require(rootDirIndex == 0) { "empty root directory must have rootDirIndex=0" }
+    } else {
+        require(rootDirIndex.toLong() + rootDirSize <= dirItemsCount) {
+            "root directory range exceeds dirItems"
+        }
+    }
     checkSha256(
         name = "contentMeta",
         expect = contentMetaSha256,
@@ -73,7 +97,7 @@ fun KonaRandomAccess.decodeKonaArchive(): KonaArchive {
         ),
         contentMetas = { callback ->
             var offset = contentMetaStart
-            val entrySize = 3 * 4 + 2 * 32
+            val entrySize = KONA_ARCHIVE_CONTENT_META_SIZE
             while (offset < namesStart) {
                 callback(
                     readContentMeta(
@@ -96,7 +120,7 @@ internal fun KonaRandomAccess.readContentMeta(
     val compressedStart = readInt32("contentMeta.compressedStart")
     val compressedSha256 = readBytes(32, "contentMeta.compressedSha256")
     val compressedSize = readInt32("contentMeta.compressedSize")
-    val uncompressedSha256 = readBytes(32, "contentMeta.unconmpressedSha256")
+    val uncompressedSha256 = readBytes(32, "contentMeta.uncompressedSha256")
     val uncompressedSize = readInt32("contentMeta.uncompressedSize")
     return KonaArchiveFile(
         name = name,

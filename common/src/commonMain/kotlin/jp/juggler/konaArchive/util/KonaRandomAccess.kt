@@ -166,6 +166,9 @@ abstract class KonaRandomAccess : AutoCloseable {
         end: Long,
         block: (ByteArray, Int) -> Unit
     ) {
+        require(start in 0L..end && end <= size) {
+            "range incorrect. [$start, $end) / [0,$size)"
+        }
         seek(start)
         val length = end - start
         var nRead = 0L
@@ -178,5 +181,6 @@ abstract class KonaRandomAccess : AutoCloseable {
             nRead += result
             block(tmpArray, result)
         }
+        require(nRead == length) { "range is shorter than expected. [$start, $end)" }
     }
 }
