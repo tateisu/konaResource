@@ -1,0 +1,26 @@
+[versions]
+kotlinxCoroutines = "1.9.0"
+kotlinGradlePluginLib = "2.1.20"
+ksp = "2.3.11"
+kotest = "6.2.4"
+kotlin = "2.4.10" # kotlinJvm, kotlinMultiplatform, kotlinSerialization
+lz4Java = "1.8.0"
+lz4Native = "1.10.0.2"
+okio = "3.9.0"
+
+[plugins]
+kotest = { id = "io.kotest", version.ref = "kotest" }
+kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+
+[libraries]
+kotestAssertions = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
+kotestFrameworkEngine = { module = "io.kotest:kotest-framework-engine", version.ref = "kotest" }
+kotestRunner = { module = "io.kotest:kotest-runner-junit5", version.ref = "kotest" }
+kotlinGradlePluginLib = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlinGradlePluginLib" }
+kotlinxCoroutinesCore = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
+lz4Java = { module = "org.lz4:lz4-java", version.ref = "lz4Java" }
+lz4Native = { module = "com.ensody.nativebuilds:lz4", version.ref = "lz4Native" }
+okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
