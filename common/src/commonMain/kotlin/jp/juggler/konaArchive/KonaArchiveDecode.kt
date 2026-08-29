@@ -1,8 +1,20 @@
 package jp.juggler.konaArchive
 
+import jp.juggler.konaArchive.util.ByteArrayRandomAccess
 import jp.juggler.konaArchive.util.KonaRandomAccess
 import jp.juggler.konaArchive.util.checkSha256
 
+/**
+ * ByteArrayからKonaArchiveを開く
+ * - ByteArrayにアクセスし続けるので後から内容を変更すると動作が壊れる
+ */
+fun ByteArray.openKonaArchive(): KonaArchive =
+    ByteArrayRandomAccess(this).decodeKonaArchiveOrClose()
+
+/**
+ * KonaRandomAccessからKonaArchiveを開く
+ * 失敗したらKonaRandomAccessをcloseする
+ */
 fun KonaRandomAccess.decodeKonaArchiveOrClose(): KonaArchive = try {
     decodeKonaArchive()
 } catch (ex: Throwable) {

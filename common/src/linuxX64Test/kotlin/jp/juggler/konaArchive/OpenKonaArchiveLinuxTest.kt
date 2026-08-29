@@ -1,11 +1,7 @@
-package jp.juggler.konaResource
+package jp.juggler.konaArchive
 
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.shouldBe
-import jp.juggler.konaArchive.KonaArchiveFile
-import jp.juggler.konaArchive.KonaWriterDirectory
-import jp.juggler.konaArchive.encodeKonaArchive
-import jp.juggler.konaArchive.toKonaWriterEntry
 import jp.juggler.konaArchive.util.FileRandomAccess
 import platform.posix.getpid
 import platform.posix.mkdir

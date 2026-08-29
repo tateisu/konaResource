@@ -37,4 +37,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "konaResource"
-include(":common", ":plugin", ":reader", ":cli", ":sample1")
+include(":common", ":plugin", ":cli", ":sample1")

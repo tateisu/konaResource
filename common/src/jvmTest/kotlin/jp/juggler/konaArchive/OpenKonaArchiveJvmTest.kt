@@ -1,8 +1,7 @@
-package jp.juggler.konaResource
+package jp.juggler.konaArchive
 
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.shouldBe
-import jp.juggler.konaArchive.*
 import jp.juggler.konaArchive.util.FileRandomAccess
 import kotlin.io.path.createTempDirectory
 import kotlin.io.path.createTempFile

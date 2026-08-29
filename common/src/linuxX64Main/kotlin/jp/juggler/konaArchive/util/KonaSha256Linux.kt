@@ -1,9 +1,9 @@
 package jp.juggler.konaArchive.util
 
-import dev.kona.resource.openssl.kona_sha256_final
-import dev.kona.resource.openssl.kona_sha256_free
-import dev.kona.resource.openssl.kona_sha256_new
-import dev.kona.resource.openssl.kona_sha256_update
+import jp.juggler.konaResource.openssl.kona_sha256_final
+import jp.juggler.konaResource.openssl.kona_sha256_free
+import jp.juggler.konaResource.openssl.kona_sha256_new
+import jp.juggler.konaResource.openssl.kona_sha256_update
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned

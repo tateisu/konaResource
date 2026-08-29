@@ -1,7 +1,5 @@
-package jp.juggler.konaResource
+package jp.juggler.konaArchive
 
-import jp.juggler.konaArchive.KonaArchive
-import jp.juggler.konaArchive.decodeKonaArchiveOrClose
 import jp.juggler.konaArchive.util.FileRandomAccess
 import java.io.File
 

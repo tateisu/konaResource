@@ -1,6 +1,6 @@
 package jp.juggler.konaArchive.util
 
-import dev.kona.resource.lz4.cinterop.*
+import jp.juggler.konaResource.lz4.cinterop.*
 import kotlinx.cinterop.*
 import okio.Buffer
 

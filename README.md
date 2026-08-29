@@ -2,9 +2,8 @@
 
 `konaResource` provides embed resource for Linux/x64 Kotlin/Native executables.
 - `plugin` is Gradle plugin that update embed resource.
-- `reader` is library to read embed resource.
-- `sample1` is sample project that uses `plugin` and `reader`
-- `common` is implementation of KonaArchive archive format.
+- `common` contains the KonaArchive archive format and the library to read embedded resources.
+- `sample1` is sample project that uses `plugin` and `common`
 - `cli` is cli tool for  KonaArchive archive format.
 
 ## plugin の導入
@@ -38,7 +37,7 @@ konaResource{
 }
 ```
 
-## reader の導入
+## common の導入
 - pluginを導入済みであること
 - Linux/x64 Kotlin/Native 用のコードから使うこと
 - 使用例 'sample1/src/linuxX64Main/kotlin/jp/juggler/konaResource/sample1/Main.kt'
@@ -47,9 +46,9 @@ konaResource{
 Run the CLI with `./gradlew :cli:run --args='list archive.bin'`.
 
 ## JitPack からの利用
-`common`、`reader`、Gradle plugin は JitPack から取得できます。JitPack は GitHub の tag から artifact をビルドするため、認証は不要です。
+`common`、Gradle plugin は JitPack から取得できます。JitPack は GitHub の tag から artifact をビルドするため、認証は不要です。
 
-`sample1` はデフォルトで公開 artifact を使用します。プロジェクトを開発するときだけ、`-PuseLocalArtifacts=true` を指定すると plugin と reader に兄弟モジュールを使用します。
+`sample1` はデフォルトで公開 artifact を使用します。プロジェクトを開発するときだけ、`-PuseLocalArtifacts=true` を指定すると plugin と common に兄弟モジュールを使用します。
 
 ```kotlin
 pluginManagement {
@@ -91,7 +90,7 @@ plugins {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("com.github.tateisu.konaResource:reader:v0.1.1")
+            implementation("com.github.tateisu.konaResource:common:v0.1.1")
         }
     }
 }

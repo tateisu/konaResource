@@ -1,7 +1,7 @@
 
 # プロジェクトの目標
-Kotlin/Native の Linux/x64 の .kexe ファイルにリソースを埋め込む Gradle Plugin と
-アプリからそれを使うライブラリの2つを提供する
+ Kotlin/Native の Linux/x64 の .kexe ファイルにリソースを埋め込む Gradle Plugin と
+ アプリからそれを使うライブラリの2つを提供する
 
 # 技術スタック
 - Compatibility guide for Kotlin Multiplatform https://kotlinlang.org/docs/multiplatform/multiplatform-compatibility-guide.html#version-compatibility の新しい方の構成
@@ -15,17 +15,13 @@ Kotlin/Native の Linux/x64 の .kexe ファイルにリソースを埋め込む
 - ルートプロジェクトは何もしない。ビルドターゲットもない
 
 ## common モジュール
-- リソースアーカイブの共通コード
+- リソースアーカイブの共通コードと、埋め込まれたリソースを読み出すライブラリ
 
 ## plugin モジュール
 - Kotlin/Native の Linux/x64 の .kexe ファイルにリソースを埋め込む Gradle Plugin
 
-## reader モジュール
-- 自身の .kexe に埋め込まれたリソースを読み出すライブラリ
-- ビルドターゲットは Linux/x64 
-
 ## sample1 モジュール
-- 上記 plugin モジュール, reader モジュールを使ってリソースにアクセスするアプリ
+- 上記 plugin モジュール, common モジュールを使ってリソースにアクセスするアプリ
 
 ## cli モジュール
 - リソースアーカイブを操作するCLIアプリ
@@ -34,4 +30,4 @@ Kotlin/Native の Linux/x64 の .kexe ファイルにリソースを埋め込む
 
 # 困ったこと・制約
 
-- `sample1` はデフォルトで JitPack の公開 artifact を使用する。プロジェクト開発時は `-PuseLocalArtifacts=true` を指定して、plugin と reader に兄弟モジュールを使用する。
+- `sample1` はデフォルトで JitPack の公開 artifact を使用する。プロジェクト開発時は `-PuseLocalArtifacts=true` を指定して、plugin と common に兄弟モジュールを使用する。

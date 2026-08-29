@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
 }
 
-group = "dev.kona.resource"
+group = "jp.juggler.konaResource"
 version = "0.1.1"
 
 kotlin {

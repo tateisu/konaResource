@@ -19,6 +19,6 @@ dependencyResolutionManagement {
 rootProject.name = "konaResource-plugin-included"
 includeBuild("../common-build") {
     dependencySubstitution {
-        substitute(module("dev.kona.resource:common")).using(project(":"))
+        substitute(module("jp.juggler.konaResource:common")).using(project(":"))
     }
 }

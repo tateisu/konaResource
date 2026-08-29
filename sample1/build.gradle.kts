@@ -19,9 +19,9 @@ kotlin {
     sourceSets {
         linuxX64Main.dependencies {
             if (providers.gradleProperty("useLocalArtifacts").map(String::toBoolean).getOrElse(false)) {
-                implementation(project(":reader"))
+                implementation(project(":common"))
             } else {
-                implementation("com.github.tateisu.konaResource:reader:v0.1.1")
+                implementation("com.github.tateisu.konaResource:common:v0.1.1")
             }
         }
     }

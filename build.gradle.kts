@@ -6,5 +6,5 @@ plugins {
     alias(libs.plugins.kotest) apply false
 }
 
-group = "dev.kona.resource"
+group = "jp.juggler.konaResource"
 version = "0.1.1"

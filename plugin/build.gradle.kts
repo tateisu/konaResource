@@ -4,6 +4,9 @@ plugins {
     `maven-publish`
 }
 
+group = "jp.juggler.konaResource"
+version = "0.1.1"
+
 dependencies {
     implementation(project(":common"))
     implementation(libs.kotlinxCoroutinesCore)
