@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotest)
+    `maven-publish`
 }
 
 group = "dev.kona.resource"

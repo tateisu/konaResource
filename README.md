@@ -46,5 +46,50 @@ konaResource{
 ## cliの使用
 Run the CLI with `./gradlew :cli:run --args='list archive.bin'`.
 
+## GitHub Packages からの利用
+`common`、`reader`、Gradle plugin は GitHub Packages の Maven repository に公開されます。
+GitHub Packages は取得にも認証が必要なため、`GITHUB_ACTOR` と `GITHUB_TOKEN`（`read:packages` 権限）を設定してください。
+
+```kotlin
+pluginManagement {
+    repositories {
+        maven {
+            url = uri("https://maven.pkg.github.com/tateisu/konaResource")
+            credentials {
+                username = providers.environmentVariable("GITHUB_ACTOR").get()
+                password = providers.environmentVariable("GITHUB_TOKEN").get()
+            }
+        }
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+dependencyResolutionManagement {
+    repositories {
+        maven {
+            url = uri("https://maven.pkg.github.com/tateisu/konaResource")
+            credentials {
+                username = providers.environmentVariable("GITHUB_ACTOR").get()
+                password = providers.environmentVariable("GITHUB_TOKEN").get()
+            }
+        }
+        mavenCentral()
+    }
+}
+
+plugins {
+    id("jp.juggler.konaResource") version "0.1.0"
+}
+
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation("dev.kona.resource:reader:0.1.0")
+        }
+    }
+}
+```
+
 ## ビルド
 // TODO

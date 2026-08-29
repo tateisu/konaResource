@@ -34,4 +34,4 @@ Kotlin/Native の Linux/x64 の .kexe ファイルにリソースを埋め込む
 
 # 困ったこと・制約
 
-- plugin は未公開のため、`sample1` は `settings.gradle.kts` の composite build で `plugin-build` を参照している。
+- 公開済み artifact の検証を外部 repository に依存させないため、`sample1` は `settings.gradle.kts` の composite build で `plugin-build` を参照している。
