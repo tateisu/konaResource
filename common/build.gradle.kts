@@ -1,3 +1,6 @@
+import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.jvm.tasks.Jar
+
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.ksp)
@@ -7,6 +10,27 @@ plugins {
 
 group = "jp.juggler.konaResource"
 version = "0.1.1"
+
+val commonJavadocJar = tasks.register<Jar>("javadocJar") {
+    archiveBaseName.set("common")
+    archiveClassifier.set("javadoc")
+    from(rootProject.file("README.md"))
+}
+
+val jvmJavadocJar = tasks.register<Jar>("jvmJavadocJar") {
+    archiveBaseName.set("common-jvm")
+    archiveClassifier.set("javadoc")
+    from(rootProject.file("README.md"))
+}
+
+publishing {
+    publications.withType<MavenPublication>().configureEach {
+        when (name) {
+            "kotlinMultiplatform" -> artifact(commonJavadocJar)
+            "jvm" -> artifact(jvmJavadocJar)
+        }
+    }
+}
 
 kotlin {
     jvm()

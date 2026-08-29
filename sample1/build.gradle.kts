@@ -1,6 +1,6 @@
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-    id("jp.juggler.konaResource") version "v0.1.1"
+    id("jp.juggler.konaResource") version "0.1.1"
 }
 
 konaResource {
@@ -18,10 +18,10 @@ kotlin {
     }
     sourceSets {
         linuxX64Main.dependencies {
-            if (providers.gradleProperty("useLocalArtifacts").map(String::toBoolean).getOrElse(false)) {
+            if (providers.gradleProperty("useLocalArtifacts").map(String::toBoolean).getOrElse(true)) {
                 implementation(project(":common"))
             } else {
-                implementation("com.github.tateisu.konaResource:common:v0.1.1")
+                implementation("jp.juggler.konaResource:common:0.1.1")
             }
         }
     }

@@ -7,6 +7,11 @@ plugins {
 group = "jp.juggler.konaResource"
 version = "0.1.1"
 
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
+
 dependencies {
     implementation(project(":common"))
     implementation(libs.kotlinxCoroutinesCore)

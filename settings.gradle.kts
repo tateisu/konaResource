@@ -1,37 +1,35 @@
 pluginManagement {
-    if (gradle.startParameter.projectProperties["useLocalArtifacts"]?.toBoolean() == true) {
+    if (gradle.startParameter.projectProperties["useLocalArtifacts"]?.toBoolean() != false) {
         includeBuild("plugin-build")
     } else {
         repositories {
-            maven {
-                url = uri("https://jitpack.io")
-                content {
-                    includeGroup("com.github.tateisu.konaResource")
-                }
-            }
             gradlePluginPortal()
             mavenCentral()
         }
         resolutionStrategy {
             eachPlugin {
                 if (requested.id.id == "jp.juggler.konaResource") {
-                    useModule("com.github.tateisu.konaResource:plugin:${requested.version}")
+                    useModule("jp.juggler.konaResource:plugin:${requested.version}")
                 }
             }
         }
     }
 }
 
+plugins {
+    id("com.gradleup.nmcp.settings") version "1.6.1"
+}
+
+nmcpSettings {
+    centralPortal {
+        username = providers.gradleProperty("centralPortalUsername").getOrElse("")
+        password = providers.gradleProperty("centralPortalPassword").getOrElse("")
+        publishingType = "USER_MANAGED"
+    }
+}
+
 dependencyResolutionManagement {
     repositories {
-        if (gradle.startParameter.projectProperties["useLocalArtifacts"]?.toBoolean() != true) {
-            maven {
-                url = uri("https://jitpack.io")
-                content {
-                    includeGroup("com.github.tateisu.konaResource")
-                }
-            }
-        }
         mavenCentral()
     }
 }

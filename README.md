@@ -45,27 +45,21 @@ konaResource{
 ## cliの使用
 Run the CLI with `./gradlew :cli:run --args='list archive.bin'`.
 
-## JitPack からの利用
-`common`、Gradle plugin は JitPack から取得できます。JitPack は GitHub の tag から artifact をビルドするため、認証は不要です。
+## 開発時の依存関係
+`sample1` はデフォルトで plugin と common に兄弟モジュールを使用します。
 
-`sample1` はデフォルトで公開 artifact を使用します。プロジェクトを開発するときだけ、`-PuseLocalArtifacts=true` を指定すると plugin と common に兄弟モジュールを使用します。
+Maven Central に公開された artifact を使う場合は、`-PuseLocalArtifacts=false` を指定します。
 
 ```kotlin
 pluginManagement {
     repositories {
-        maven {
-            url = uri("https://jitpack.io")
-            content {
-                includeGroup("com.github.tateisu.konaResource")
-            }
-        }
         gradlePluginPortal()
         mavenCentral()
     }
     resolutionStrategy {
         eachPlugin {
             if (requested.id.id == "jp.juggler.konaResource") {
-                useModule("com.github.tateisu.konaResource:plugin:${requested.version}")
+                useModule("jp.juggler.konaResource:plugin:${requested.version}")
             }
         }
     }
@@ -73,28 +67,36 @@ pluginManagement {
 
 dependencyResolutionManagement {
     repositories {
-        maven {
-            url = uri("https://jitpack.io")
-            content {
-                includeGroup("com.github.tateisu.konaResource")
-            }
-        }
         mavenCentral()
     }
 }
 
 plugins {
-    id("jp.juggler.konaResource") version "v0.1.1"
+    id("jp.juggler.konaResource") version "0.1.1"
 }
 
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("com.github.tateisu.konaResource:common:v0.1.1")
+            implementation("jp.juggler.konaResource:common:0.1.1")
         }
     }
 }
 ```
+
+## Maven Central への公開
+Maven Central の user token は Gradle の project directory に保存せず、CI では GitHub Environment secrets から渡します。
+
+必要な Environment secrets は次の通りです。
+
+```text
+CENTRAL_PORTAL_USERNAME
+CENTRAL_PORTAL_PASSWORD
+SIGNING_KEY
+SIGNING_PASSWORD
+```
+
+`maven-central` Environment を設定した tag を push すると、GitHub Actions が Central Portal へ upload します。`SIGNING_KEY` は ASCII-armored 形式の GPG 秘密鍵です。
 
 ## ビルド
 // TODO

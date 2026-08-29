@@ -1,7 +1,6 @@
 plugins {
     alias(libs.plugins.kotlinJvm)
     `java-gradle-plugin`
-    `maven-publish`
 }
 
 group = "jp.juggler.konaResource"

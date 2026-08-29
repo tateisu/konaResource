@@ -30,4 +30,4 @@
 
 # 困ったこと・制約
 
-- `sample1` はデフォルトで JitPack の公開 artifact を使用する。プロジェクト開発時は `-PuseLocalArtifacts=true` を指定して、plugin と common に兄弟モジュールを使用する。
+- `sample1` はデフォルトで plugin と common に兄弟モジュールを使用する。Maven Central の公開 artifact を使う場合は `-PuseLocalArtifacts=false` を指定する。
