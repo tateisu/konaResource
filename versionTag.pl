@@ -87,6 +87,8 @@ my $answer = prompt(
 );
 $answer or die "否決されました\n";
 
+# mainブランチのpush
+cmd qq(git push origin main);
 # タグの作成とpush
 cmd qq(git tag -a '$tag' -m 'Release $version');
 cmd qq(git push origin '$tag');
