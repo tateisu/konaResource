@@ -77,7 +77,7 @@ my $branch = trim `git branch --show-current 2>&1`;
 my $tag = "v$version";
 
 # タグがまだ存在しないことを確認する
-my $check = trim `git tag --list '$tag' 2>&1`;
+my $check = trim(`git tag --list '$tag' 2>&1`);
 length($check) and die "tag already exists? $check";
 
 my $answer = prompt(
