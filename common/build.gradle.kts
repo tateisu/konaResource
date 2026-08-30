@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "jp.juggler.konaResource"
-version = "0.1.2"
+version = rootProject.version
 
 val commonJavadocJar = tasks.register<Jar>("javadocJar") {
     archiveBaseName.set("common")

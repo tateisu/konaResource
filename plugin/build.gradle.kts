@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "jp.juggler.konaResource"
-version = "0.1.2"
+version = rootProject.version
 
 java {
     withSourcesJar()

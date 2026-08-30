@@ -11,7 +11,7 @@ plugins {
 }
 
 group = "jp.juggler.konaResource"
-version = "0.1.2"
+version = "0.1.3"
 
 subprojects {
     plugins.withId("maven-publish") {
