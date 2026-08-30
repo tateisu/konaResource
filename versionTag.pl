@@ -4,6 +4,7 @@ use IO::Prompter;
 
 ###############################################
 sub cmd($cmd){
+    $cmd =~ s/\s+/ /g;
     say "+$cmd";
     system $cmd;
     if($?){
@@ -55,7 +56,12 @@ if( @versions !=1 ){
 }
 
 # ビルドを通ることを確認
-cmd qq(./gradlew -PuseLocalArtifacts=true check sample1:runDebugExecutableLinuxX64 sample1:runReleaseExecutableLinuxX64);
+cmd qq(
+    ./gradlew
+    check
+    sample1:runDebugExecutableLinuxX64
+    sample1:runReleaseExecutableLinuxX64
+);
 
 # 未コミットまたは未追加の変更をチェック
 my @lines = grep{ length $_} map{ trim $_ } `git status --porcelain --untracked-files=all`;

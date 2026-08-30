@@ -1,4 +1,3 @@
-import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.jvm.tasks.Jar
 
 plugins {
@@ -12,12 +11,14 @@ group = "jp.juggler.konaResource"
 version = rootProject.version
 
 val commonJavadocJar = tasks.register<Jar>("javadocJar") {
+    description = "javadoc Jarを生成する(common)"
     archiveBaseName.set("common")
     archiveClassifier.set("javadoc")
     from(rootProject.file("README.md"))
 }
 
 val jvmJavadocJar = tasks.register<Jar>("jvmJavadocJar") {
+    description = "javadoc Jarを生成する(common-jvm)"
     archiveBaseName.set("common-jvm")
     archiveClassifier.set("javadoc")
     from(rootProject.file("README.md"))

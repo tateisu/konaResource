@@ -7,8 +7,10 @@
 - `cli` is cli tool for  KonaArchive archive format.
 
 ## plugin の導入
+
 ### 依存関係の追加
 (公開したら書く)
+
 ### pluginのビルド時設定
 - 使用例 `sample1/build.gradle.kts`
 
@@ -45,58 +47,27 @@ konaResource{
 ## cliの使用
 Run the CLI with `./gradlew :cli:run --args='list archive.bin'`.
 
-## 開発時の依存関係
-`sample1` はデフォルトで plugin と common に兄弟モジュールを使用します。
-
-Maven Central に公開された artifact を使う場合は、`-PuseLocalArtifacts=false` を指定します。
-
-```kotlin
-pluginManagement {
-    repositories {
-        gradlePluginPortal()
-        mavenCentral()
-    }
-    resolutionStrategy {
-        eachPlugin {
-            if (requested.id.id == "jp.juggler.konaResource") {
-                useModule("jp.juggler.konaResource:plugin:${requested.version}")
-            }
-        }
-    }
-}
-
-dependencyResolutionManagement {
-    repositories {
-        mavenCentral()
-    }
-}
-
-plugins {
-    id("jp.juggler.konaResource") version "$version"
-}
-
-kotlin {
-    sourceSets {
-        commonMain.dependencies {
-            implementation("jp.juggler.konaResource:common:$version")
-        }
-    }
-}
-```
-
-## Maven Central への公開
-Maven Central の user token は Gradle の project directory に保存せず、CI では GitHub Environment secrets から渡します。
-
-必要な Environment secrets は次の通りです。
-
-```text
-CENTRAL_PORTAL_USERNAME
-CENTRAL_PORTAL_PASSWORD
-GPG_KEY_01C52FD776E9651B84D63971A8E469517CB52830
-SIGNING_PASSWORD
-```
-
-`maven-central` Environment を設定した tag を push すると、GitHub Actions が Central Portal へ upload します。`GPG_KEY_01C52FD776E9651B84D63971A8E469517CB52830` は ASCII-armored 形式の GPG 秘密鍵です。
-
 ## ビルド
-// TODO
+
+```shell
+# ビルド
+./gradlew build
+
+# テストを実行
+./gradlew check
+
+# sample1 の debug 実行ファイルをビルドして実行
+./gradlew sample1:runDebugExecutableLinuxX64
+
+# sample1 の release 実行ファイルをビルドして確認
+./gradlew sample1:linkReleaseExecutableLinuxX64
+```
+
+### sample1が使用するアーティファクトの切り替え
+- `sample1` はデフォルトではプロジェクト中の兄弟モジュールを使用します。
+- Gradle に `-Psample1Artifact=0.1.3` のように指定すると Maven Central で公開済みの artifact を使用します。
+
+例:
+```
+./gradlew -Psample1Artifact=0.1.3 clean sample1:runDebugExecutableLinuxX64
+```
