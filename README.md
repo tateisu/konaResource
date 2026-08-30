@@ -51,7 +51,12 @@ konaResource{
 
 ```kotlin
 val root = embedKonaArchive("sample").root
-val string = (root.getPath(path) as? KonaArchiveFile)?.string()
+val bytes = root.pathToFile(path)?.bytes()
+val string = root.pathToFile(path)?.string()
+val buffer = root.pathToFile(path)?.buffer()
+for( entry in root.pathToDir(path)!!){
+    println("name=${entry.name}")
+}
 ```
 
 ## Using common
