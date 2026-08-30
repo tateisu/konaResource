@@ -1,9 +1,28 @@
+@file:Suppress("MatchingDeclarationName")
+
 package jp.juggler.konaArchive.util
 
-import kotlinx.cinterop.*
-import platform.posix.*
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.alloc
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.ptr
+import kotlinx.cinterop.usePinned
+import platform.posix.EINTR
+import platform.posix.O_CREAT
+import platform.posix.O_RDONLY
+import platform.posix.O_RDWR
+import platform.posix.close
+import platform.posix.errno
+import platform.posix.fstat
+import platform.posix.ftruncate
+import platform.posix.open
+import platform.posix.pread
+import platform.posix.pwrite
+import platform.posix.stat
 
 @OptIn(ExperimentalForeignApi::class)
+@Suppress("MatchingDeclarationName", "MagicNumber")
 class FileRandomAccess private constructor(
     val path: String,
     var fileDescriptor: Int,
@@ -86,9 +105,8 @@ class FileRandomAccess private constructor(
         if (length <= 0) return
         ensureSize(length, "bytes[$length]")
         var nWrite = 0
-        while (true) {
+        while (nWrite < length) {
             val remaining = length - nWrite
-            if (remaining <= 0L) break
             val result = b.usePinned { pinned ->
                 pwrite(
                     fileDescriptor,
@@ -111,7 +129,6 @@ class FileRandomAccess private constructor(
         }
     }
 
-
     override fun readByteArray(
         b: ByteArray,
         start: Int,
@@ -122,31 +139,34 @@ class FileRandomAccess private constructor(
         if (length <= 0) return 0
         if (fileDescriptor < 0) error("fileDescriptor was closed.")
         var nRead = 0
-        while (true) {
+        var done = false
+        while (nRead < length && !done) {
             val remaining = length - nRead
-            if (remaining <= 0) break
             val available = size - pos
-            if (available <= 0L) break
-            val requestSize = minOf(remaining.toLong(), available).toInt()
-            val result = b.usePinned { pinned ->
-                pread(
-                    fileDescriptor,
-                    pinned.addressOf(start + nRead),
-                    requestSize.toULong(),
-                    baseOffset + pos,
-                )
-            }
-            when {
-                result < 0L -> when (errno) {
-                    EINTR -> continue
-                    else -> throw ErrnoException("read failed.")
+            if (available <= 0L) {
+                done = true
+            } else {
+                val requestSize = minOf(remaining.toLong(), available).toInt()
+                val result = b.usePinned { pinned ->
+                    pread(
+                        fileDescriptor,
+                        pinned.addressOf(start + nRead),
+                        requestSize.toULong(),
+                        baseOffset + pos,
+                    )
                 }
+                when {
+                    result < 0L -> when (errno) {
+                        EINTR -> Unit
+                        else -> throw ErrnoException("read failed.")
+                    }
 
-                result == 0L -> break
+                    result == 0L -> done = true
 
-                else -> {
-                    nRead += result.toInt()
-                    pos += result
+                    else -> {
+                        nRead += result.toInt()
+                        pos += result
+                    }
                 }
             }
         }

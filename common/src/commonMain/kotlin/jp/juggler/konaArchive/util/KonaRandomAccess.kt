@@ -8,6 +8,7 @@ import kotlin.math.min
  * - 使い終わったらcloseすること
  * - 開いた直後のpositionやsizeは全く保証されない。利用側が適切にseek,truncateすること
  */
+@Suppress("TooManyFunctions")
 abstract class KonaRandomAccess : AutoCloseable {
     /**
      * リードオンリーなら真
@@ -55,13 +56,13 @@ abstract class KonaRandomAccess : AutoCloseable {
     // 考慮するならmutexが必要
     val tmpArray = ByteArray(4096)
 
-    fun readToTmpArray(length: Int? = null) :Int = readByteArray(
+    fun readToTmpArray(length: Int? = null): Int = readByteArray(
         tmpArray,
         0,
-        when{
-            length==null -> tmpArray.size
-            else -> min(length,tmpArray.size)
-        }
+        when {
+            length == null -> tmpArray.size
+            else -> min(length, tmpArray.size)
+        },
     )
 
     /**
@@ -75,6 +76,7 @@ abstract class KonaRandomAccess : AutoCloseable {
     /**
      * pos位置から1バイト読む。posが範囲外ならnull
      */
+    @Suppress("MagicNumber")
     open fun readByte(): Int? {
         val nRead = readByteArray(tmpArray, 0, 1)
         return if (nRead <= 0) null else tmpArray[0].toInt().and(0xff)
@@ -84,6 +86,7 @@ abstract class KonaRandomAccess : AutoCloseable {
      * pos位置にInt32を書き込む
      * little endian
      */
+    @Suppress("MagicNumber")
     open fun writeInt32(i: Int) {
         tmpArray[0] = i.toByte()
         tmpArray[1] = (i ushr 8).toByte()
@@ -97,6 +100,7 @@ abstract class KonaRandomAccess : AutoCloseable {
      * 範囲内ではないなら missing name 例外を投げる
      * little endian
      */
+    @Suppress("MagicNumber")
     open fun readInt32(name: String): Int {
         val nRead = readByteArray(tmpArray, 0, 4)
         if (nRead < 4L) error("missing (i32)$name")
@@ -130,9 +134,8 @@ abstract class KonaRandomAccess : AutoCloseable {
     open fun readBuffer(b: Buffer, maxLength: Long): Long {
         if (maxLength <= 0L) return 0
         var nRead = 0L
-        while (true) {
+        while (nRead < maxLength) {
             val remaining = maxLength - nRead
-            if (remaining <= 0L) break
             val step = min(remaining, tmpArray.size.toLong()).toInt()
             val result = readByteArray(tmpArray, 0, step)
             if (result <= 0) break
@@ -164,7 +167,7 @@ abstract class KonaRandomAccess : AutoCloseable {
     fun readRange(
         start: Long,
         end: Long,
-        block: (ByteArray, Int) -> Unit
+        block: (ByteArray, Int) -> Unit,
     ) {
         require(start in 0L..end && end <= size) {
             "range incorrect. [$start, $end) / [0,$size)"
@@ -172,9 +175,8 @@ abstract class KonaRandomAccess : AutoCloseable {
         seek(start)
         val length = end - start
         var nRead = 0L
-        while (true) {
+        while (nRead < length) {
             val remaining = length - nRead
-            if (remaining <= 0L) break
             val step = min(remaining, tmpArray.size.toLong()).toInt()
             val result = readByteArray(tmpArray, 0, step)
             if (result <= 0) break

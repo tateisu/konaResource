@@ -15,6 +15,7 @@ internal const val DIR_MASK = DIR_FLAG.inv()
 
 class KonaArchive(
     private val access: KonaRandomAccess,
+    @Suppress("unused")
     val root: KonaArchiveDir,
     // SHA256で識別されるコンテンツを列挙するラムダ
     val contentMetas: (callback: (KonaArchiveFile) -> Unit) -> Unit,
@@ -54,7 +55,7 @@ class KonaArchiveFile(
      * SHA256 の検証は行わない。
      */
     fun content(
-        callback: (Buffer) -> Unit = {}
+        callback: (Buffer) -> Unit = {},
     ): Buffer = access.subRange(
         compressedStart.toLong(),
         (compressedStart + compressedSize).toLong(),
@@ -71,7 +72,7 @@ class KonaArchiveFile(
                         it.write(
                             compressedRange.tmpArray,
                             0,
-                            i
+                            i,
                         )
                         i
                     }
@@ -135,6 +136,7 @@ class KonaArchiveFile(
 /**
  * KonaArchiveのディレクトリ
  */
+@Suppress("TooManyFunctions")
 class KonaArchiveDir(
     override val name: String,
     private val access: KonaRandomAccess,
@@ -156,7 +158,7 @@ class KonaArchiveDir(
             require(dirIndex == 0) { "empty directory must have dirIndex=0: $dirIndex" }
         } else {
             check(dirIndex in dirItemsRange) {
-                "dirIndex=${dirIndex} must in $dirItemsRange"
+                "dirIndex=$dirIndex must in $dirItemsRange"
             }
             check(dirIndex.toLong() + dirCount <= dirItemsRange.last.toLong() + 1L) {
                 "directory range [$dirIndex, ${dirIndex + dirCount}) must in $dirItemsRange"
@@ -284,13 +286,13 @@ class KonaArchiveDir(
 
     override fun subList(
         fromIndex: Int,
-        toIndex: Int
+        toIndex: Int,
     ): List<KonaArchiveEntry> {
         if (fromIndex !in 0..size || toIndex !in 0..size) {
             throw IndexOutOfBoundsException("range [$fromIndex, $toIndex) must be in 0..$size")
         }
-        if (fromIndex > toIndex) {
-            throw IllegalArgumentException("fromIndex ($fromIndex) must not be greater than toIndex ($toIndex)")
+        require(fromIndex <= toIndex) {
+            "fromIndex ($fromIndex) must not be greater than toIndex ($toIndex)"
         }
         return (fromIndex until toIndex).map(::get)
     }
@@ -299,17 +301,18 @@ class KonaArchiveDir(
      * 相対 path の各要素を順に辿ってアーカイブエントリを取得する。
      * 先頭の空要素は `/` とみなして無視する。
      */
+    @Suppress("ReturnCount")
     operator fun get(
-        pathSegments: List<String>
+        pathSegments: List<String>,
     ): KonaArchiveEntry? {
         val first = pathSegments.indexOfFirst { it.isNotEmpty() }
         if (first < 0) return this
 
-        var current: KonaArchiveEntry = this
+        var current: KonaArchiveEntry? = this
         for (i in first until pathSegments.size) {
             val segment = pathSegments[i]
-            if (segment.isEmpty()) return null
-            current = (current as? KonaArchiveDir)?.get(segment) ?: return null
+            current = if (segment.isEmpty()) null else (current as? KonaArchiveDir)?.get(segment)
+            if (current == null) break
         }
         return current
     }
@@ -330,6 +333,14 @@ class KonaArchiveDir(
                 if (separator < 0) break
                 start = separator + 1
             }
-        }
+        },
     )
+
+    // ショートハンド
+    fun pathToFile(path: String) = getPath(path) as? KonaArchiveFile
+    fun pathToDir(path: String) = getPath(path) as? KonaArchiveDir
+    fun file(i: Int) = get(i) as? KonaArchiveFile
+    fun dir(i: Int) = get(i) as? KonaArchiveDir
+    fun file(name: String) = get(name) as? KonaArchiveFile
+    fun dir(name: String) = get(name) as? KonaArchiveDir
 }

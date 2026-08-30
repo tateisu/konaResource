@@ -3,12 +3,12 @@ package jp.juggler.konaArchive
 import jp.juggler.konaArchive.util.FileRandomAccess
 import java.io.File
 
-fun File.toKonaWriterEntry(): KonaWriterEntry {
+fun File.toKonaWriterEntry(): KonaWriterEntry? {
     require(exists()) { "File does not exist: $this" }
     val source = this
     return when {
         isDirectory -> KonaWriterDirectory(name) {
-            listFiles()?.map { it.toKonaWriterEntry() }
+            listFiles()?.mapNotNull { it.toKonaWriterEntry() }
                 ?: error("Unable to list directory: $source")
         }
 
@@ -16,6 +16,6 @@ fun File.toKonaWriterEntry(): KonaWriterEntry {
             FileRandomAccess(source, isReadOnly = true)
         }
 
-        else -> error("Unsupported file type: $this")
+        else -> null
     }
 }

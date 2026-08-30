@@ -4,7 +4,9 @@ import jp.juggler.konaArchive.util.FileRandomAccess
 import java.io.File
 import java.nio.file.Files
 
-private object JvmKonaArchiveTestUtils : KonaArchiveTestUtils {
+internal actual val konaArchiveTestUtils: KonaArchiveTestUtils = KonaArchiveTestUtilsJvm
+
+private object KonaArchiveTestUtilsJvm : KonaArchiveTestUtils {
     override fun tempDirectory(name: String): String =
         Files.createTempDirectory("kona-resource-$name-").toFile().path
 
@@ -43,5 +45,3 @@ private object JvmKonaArchiveTestUtils : KonaArchiveTestUtils {
         FileRandomAccess(File(path), isReadOnly = true)
             .decodeKonaArchiveOrClose()
 }
-
-internal actual val konaArchiveTestUtils: KonaArchiveTestUtils = JvmKonaArchiveTestUtils

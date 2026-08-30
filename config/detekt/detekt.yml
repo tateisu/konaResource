@@ -1,0 +1,26 @@
+# Project-wide Detekt configuration.
+# Default Detekt rules remain enabled through buildUponDefaultConfig.
+config:
+  validation: true
+  warningsAsErrors: false
+
+performance:
+  SpreadOperator:
+    active: false
+
+complexity:
+  NestedBlockDepth:
+    threshold: 8
+  LongParameterList:
+    functionThreshold: 10
+    constructorThreshold: 20
+
+style:
+  MagicNumber:
+    active: false
+
+formatting:
+  active: true
+  autoCorrect: false
+  Filename:
+    active: false

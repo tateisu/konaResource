@@ -12,7 +12,6 @@ kotlin {
             kotlin.srcDir("../common/src/commonMain/kotlin")
             dependencies {
                 implementation(libs.okio)
-                implementation(libs.kotlinxCoroutinesCore)
             }
         }
         jvmMain {

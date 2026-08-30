@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "jp.juggler.konaResource"
-version = "0.1.2"
+version = rootProject.version
 
 repositories {
     mavenCentral()
@@ -19,8 +19,7 @@ kotlin {
 }
 
 dependencies {
-    implementation("jp.juggler.konaResource:common:0.1.2")
-    implementation(libs.kotlinxCoroutinesCore)
+    implementation("jp.juggler.konaResource:common:${rootProject.version}")
     compileOnly(libs.kotlinGradlePluginLib)
     testImplementation(gradleTestKit())
     testImplementation(kotlin("test"))
@@ -31,7 +30,7 @@ gradlePlugin {
         create("konaResource") {
             id = "jp.juggler.konaResource"
             implementationClass = "jp.juggler.konaResource.plugin.KonaResourcePlugin"
-            displayName = "Kona Resource"
+            displayName = "konaResource"
             description = "Embeds resource archives in Linux/x64 Kotlin/Native executables"
         }
     }

@@ -1,7 +1,10 @@
 package jp.juggler.konaArchive.util
 
-import kotlinx.cinterop.*
-import platform.posix.dlsym
+import kotlinx.cinterop.ByteVar
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.toCPointer
+import kotlinx.cinterop.usePinned
 import platform.posix.memcpy
 
 /**
@@ -24,7 +27,7 @@ class EmbedRandomAccess(
     }
 
     private fun writeError(): Nothing =
-        throw IllegalStateException("EmbedRandomAccess has no support of write access.")
+        error("EmbedRandomAccess has no support of write access.")
 
     override fun truncate() = writeError()
     override fun writeByteArray(
@@ -53,7 +56,7 @@ class EmbedRandomAccess(
     override fun subRange(start: Long, end: Long): EmbedRandomAccess {
         require(start in 0L..end && end <= size) { "sub-range incorrect. [$start, $end) / [0,$size)" }
         return EmbedRandomAccess(
-            addressRange = addressRange.first + start until addressRange.first + end
+            addressRange = addressRange.first + start until addressRange.first + end,
         )
     }
 }

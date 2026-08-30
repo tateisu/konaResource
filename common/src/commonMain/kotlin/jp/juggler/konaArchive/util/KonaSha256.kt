@@ -3,7 +3,7 @@ package jp.juggler.konaArchive.util
 import okio.ByteString.Companion.toByteString
 
 interface KonaSha256 {
-    fun update(ba: ByteArray, start: Int=0,end: Int=ba.size)
+    fun update(ba: ByteArray, start: Int = 0, end: Int = ba.size)
     fun finish(): ByteArray
 }
 
@@ -34,7 +34,7 @@ internal fun KonaRandomAccess.checkSha256(
 }
 
 internal fun ByteArray.sha256(): ByteArray =
-    with(defaultKonaSha256()){
+    with(defaultKonaSha256()) {
         update(this@sha256)
         finish()
     }

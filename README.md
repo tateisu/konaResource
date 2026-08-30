@@ -4,18 +4,25 @@
 - `plugin` is Gradle plugin that update embed resource.
 - `common` contains the KonaArchive archive format and the library to read embedded resources.
 - `sample1` is sample project that uses `plugin` and `common`
-- `cli` is cli tool for  KonaArchive archive format.
+- `cli` is cli tool for KonaArchive archive format.
 
-## plugin の導入
-
-### 依存関係の追加
-(公開したら書く)
-
-### pluginのビルド時設定
-- 使用例 `sample1/build.gradle.kts`
-
+## 利用時のビルド設定
 
 ```
+plugins {
+    alias(libs.plugins.kotlinMultiplatform)
+    // konaResource プラグインを追加
+    id("jp.juggler.konaResource") version "..."
+}
+kotlin {
+    sourceSets {
+        linuxX64Main.dependencies {
+            // konaResource common モジュールの追加
+            implementation("jp.juggler.konaResource:common:...")
+        }
+    }
+}
+// 圧縮設定やリソースフォルダの指定
 konaResource{
     // LZ4圧縮パラメータ。全てデフォルト値ありで、指定は必須ではない
     // LZ4F compression level。0 はデフォルト高速圧縮、正数は LZ4HC、負数は fast acceleration
@@ -39,13 +46,32 @@ konaResource{
 }
 ```
 
+## 利用時のリソースアクセス
+- 例 'sample1/src/linuxX64Main/kotlin/jp/juggler/konaResource/sample1/Main.kt'
+
+```kotlin
+val root = embedKonaArchive("sample").root
+val string = (root.getPath(path) as? KonaArchiveFile)?.string()
+```
+
 ## common の導入
 - pluginを導入済みであること
 - Linux/x64 Kotlin/Native 用のコードから使うこと
-- 使用例 'sample1/src/linuxX64Main/kotlin/jp/juggler/konaResource/sample1/Main.kt'
 
 ## cliの使用
-Run the CLI with `./gradlew :cli:run --args='list archive.bin'`.
+```shell
+# archive の内容を一覧表示
+./gradlew :cli:run --args='list archive.bin'
+
+# ディレクトリを archive に変換
+./gradlew :cli:run --args='pack archive.bin input-directory'
+
+# 前回の archive を指定して同一コンテンツを再利用
+./gradlew :cli:run --args='pack archive.bin input-directory --previous archive.bin'
+
+# archive を展開
+./gradlew :cli:run --args='extract archive.bin output-directory'
+```
 
 ## ビルド
 

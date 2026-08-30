@@ -8,7 +8,7 @@ import jp.juggler.konaArchive.util.rangeSha256
 
 private fun mergePath(
     parentPath: String,
-    name: String
+    name: String,
 ): String = when (parentPath) {
     "" -> name
     else -> "$parentPath/$name"
@@ -16,7 +16,7 @@ private fun mergePath(
 
 private fun KonaWriterDirectory.scan(
     path: String,
-    block: (String, KonaWriterEntry) -> Unit
+    block: (String, KonaWriterEntry) -> Unit,
 ) {
     val dupCheck = mutableSetOf<String>()
     for (entry in list().sorted()) {
@@ -35,6 +35,7 @@ private fun KonaWriterDirectory.scan(
 /**
  * レシーバの先頭にシークして KonaArchive のバイナリを出力して truncate,close する
  */
+@Suppress("LongMethod", "CyclomaticComplexMethod")
 fun KonaRandomAccess.encodeKonaArchive(
     root: KonaWriterDirectory,
     options: Lz4Options = Lz4Options(),
@@ -94,7 +95,7 @@ fun KonaRandomAccess.encodeKonaArchive(
                     uncompressedSize = uncompressedSize.toInt(),
                     compressedSha256 = old.compressedSha256,
                     uncompressedSha256 = uncompressedSha256,
-                )
+                ),
             )
             return@scan
         }
@@ -112,7 +113,7 @@ fun KonaRandomAccess.encodeKonaArchive(
                 },
                 output = {
                     writeByteArray(it.readByteArray())
-                }
+                },
             )
         }
         val end = pos
@@ -130,7 +131,7 @@ fun KonaRandomAccess.encodeKonaArchive(
                 uncompressedSize = uncompressedSize.toInt(),
                 compressedSha256 = compressedSha256,
                 uncompressedSha256 = uncompressedSha256,
-            )
+            ),
         )
     }
 
@@ -191,7 +192,8 @@ fun KonaRandomAccess.encodeKonaArchive(
             startIndex to list.size
         }
     }
-    //--------------------------------------
+
+    // --------------------------------------
     // write header
     val headerStart = pos
 

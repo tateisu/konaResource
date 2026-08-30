@@ -1,7 +1,33 @@
 package jp.juggler.konaArchive.util
 
-import jp.juggler.konaResource.lz4.cinterop.*
-import kotlinx.cinterop.*
+import jp.juggler.konaResource.lz4.cinterop.LZ4F_compressBegin
+import jp.juggler.konaResource.lz4.cinterop.LZ4F_compressBound
+import jp.juggler.konaResource.lz4.cinterop.LZ4F_compressEnd
+import jp.juggler.konaResource.lz4.cinterop.LZ4F_compressUpdate
+import jp.juggler.konaResource.lz4.cinterop.LZ4F_compressionContext_tVar
+import jp.juggler.konaResource.lz4.cinterop.LZ4F_createCompressionContext
+import jp.juggler.konaResource.lz4.cinterop.LZ4F_createDecompressionContext
+import jp.juggler.konaResource.lz4.cinterop.LZ4F_decompress
+import jp.juggler.konaResource.lz4.cinterop.LZ4F_decompressionContext_tVar
+import jp.juggler.konaResource.lz4.cinterop.LZ4F_freeCompressionContext
+import jp.juggler.konaResource.lz4.cinterop.LZ4F_freeDecompressionContext
+import jp.juggler.konaResource.lz4.cinterop.LZ4F_getErrorName
+import jp.juggler.konaResource.lz4.cinterop.LZ4F_isError
+import jp.juggler.konaResource.lz4.cinterop.LZ4F_preferences_t
+import jp.juggler.konaResource.lz4.cinterop.kona_lz4_init_preferences
+import kotlinx.cinterop.CPointer
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.Pinned
+import kotlinx.cinterop.ULongVar
+import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.alloc
+import kotlinx.cinterop.allocArray
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.pointed
+import kotlinx.cinterop.ptr
+import kotlinx.cinterop.toKString
+import kotlinx.cinterop.usePinned
+import kotlinx.cinterop.value
 import okio.Buffer
 
 private const val LZ4F_VERSION = 100u
@@ -10,6 +36,7 @@ private const val CHUNK_SIZE = 64 * 1024
 internal actual val defaultLz4Codec: Lz4Codec = Lz4CodecLinux
 
 @OptIn(ExperimentalForeignApi::class)
+@Suppress("MagicNumber")
 private object Lz4CodecLinux : Lz4Codec {
     private class CompressEnv(
         val contextPtr: LZ4F_compressionContext_tVar,
@@ -53,7 +80,7 @@ private object Lz4CodecLinux : Lz4Codec {
                         dstCapacity = dstArraySize,
                         src = inputPinned.addressOf(0),
                         srcSize = chunkSize.toULong(),
-                        optionsPtr = null
+                        optionsPtr = null,
                     )
                 }
             }
@@ -72,7 +99,7 @@ private object Lz4CodecLinux : Lz4Codec {
                     cctx = context,
                     dst = dstArray.addressOf(0),
                     dstCapacity = dstArraySize,
-                    optionsPtr = null
+                    optionsPtr = null,
                 )
             }
             checkLz4(written, "finish frame")
@@ -85,18 +112,19 @@ private object Lz4CodecLinux : Lz4Codec {
         require(LZ4F_isError(code) == 0u) { "LZ4 failed to $operation: ${LZ4F_getErrorName(code)?.toKString()}" }
     }
 
+    @Suppress("LongMethod", "CyclomaticComplexMethod")
     override fun compress(
         inputSize: Int,
         options: Lz4Options,
         input: (Buffer) -> Int,
         output: (Buffer) -> Unit,
-    ) : Buffer = memScoped {
+    ): Buffer = memScoped {
         with(
-                CompressEnv(
-                    contextPtr = alloc<LZ4F_compressionContext_tVar>(),
-                    preferencesPtr = alloc<LZ4F_preferences_t>().ptr,
-                )
-            ) {
+            CompressEnv(
+                contextPtr = alloc<LZ4F_compressionContext_tVar>(),
+                preferencesPtr = alloc<LZ4F_preferences_t>().ptr,
+            ),
+        ) {
             try {
                 kona_lz4_init_preferences(
                     preferences = preferencesPtr,
@@ -114,18 +142,32 @@ private object Lz4CodecLinux : Lz4Codec {
                         contextPtr.ptr,
                         LZ4F_VERSION,
                     ),
-                    "create compression context"
+                    "create compression context",
                 )
                 compressBegin()
                 var consumedInput = 0
-                while (consumedInput < inputSize) {
+                var inputFinished = false
+                while (!inputFinished && consumedInput < inputSize) {
                     val before = inputBuffer.size
                     val read = input(inputBuffer)
                     val added = (inputBuffer.size - before).toInt()
-                    require(read == added) { "LZ4 input callback size mismatch" }
-                    require(read >= 0) { "LZ4 input ended before the expected input size was consumed" }
-                    require(!inputBuffer.exhausted()) {
-                        "LZ4 input callback returned no data before the expected input size was consumed"
+                    when {
+                        read == -1 -> {
+                            require(added == 0) { "LZ4 input callback returned data after EOF" }
+                            inputFinished = true
+                        }
+
+                        read == 0 -> {
+                            require(added == 0) { "LZ4 input callback size mismatch" }
+                            inputFinished = true
+                        }
+
+                        else -> {
+                            require(read == added) { "LZ4 input callback size mismatch" }
+                            require(!inputBuffer.exhausted()) {
+                                "LZ4 input callback returned no data before the expected input size was consumed"
+                            }
+                        }
                     }
                     while (!inputBuffer.exhausted()) {
                         consumedInput += compressUpdate()
@@ -135,7 +177,9 @@ private object Lz4CodecLinux : Lz4Codec {
                         }
                     }
                 }
-                require(consumedInput == inputSize) { "LZ4 input size mismatch" }
+                require(!options.contentSizeFlag || consumedInput == inputSize) {
+                    "LZ4 input size mismatch: expected $inputSize, got $consumedInput"
+                }
                 compressEnd()
                 if (!outputBuffer.exhausted()) {
                     output(outputBuffer)
@@ -147,19 +191,20 @@ private object Lz4CodecLinux : Lz4Codec {
         }
     }
 
+    @Suppress("LongMethod")
     override fun decompress(
         expectedSize: Int,
         input: (Buffer) -> Int,
         output: (Buffer) -> Unit,
-    ) : Buffer = memScoped {
+    ): Buffer = memScoped {
         require(expectedSize >= 0) { "expectedSize must not be negative" }
         val context = alloc<LZ4F_decompressionContext_tVar>()
         checkLz4(
             LZ4F_createDecompressionContext(
                 context.ptr,
-                LZ4F_VERSION
+                LZ4F_VERSION,
             ),
-            "create decompression context"
+            "create decompression context",
         )
         try {
             val inputBuffer = Buffer()
@@ -223,7 +268,11 @@ private object Lz4CodecLinux : Lz4Codec {
                     producedOutput += produced
                 }
                 finished = result == 0uL
-                if (!finished) require(sourceSize.pointed.value != 0uL || produced != 0) { "LZ4 decompressor made no progress" }
+                if (!finished) {
+                    require(sourceSize.pointed.value != 0uL || produced != 0) {
+                        "LZ4 decompressor made no progress"
+                    }
+                }
             }
             require(producedOutput == expectedSize) { "LZ4 size mismatch" }
             require(pendingOffset == pending.size && inputBuffer.exhausted()) { "Trailing bytes after LZ4 frame" }

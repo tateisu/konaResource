@@ -4,9 +4,10 @@ import okio.Buffer
 
 internal expect val defaultLz4Codec: Lz4Codec
 
+@Suppress("MagicNumber")
 data class Lz4Options(
     val compressionLevel: Int = 0,
-    val blockSize: Int = 4 * 1024 * 1024,
+    val blockSize: Int = 4 * SIZE_MIB,
     val blockLinked: Boolean = true,
     val contentSizeFlag: Boolean = true,
     val contentChecksumFlag: Boolean = true,
@@ -16,9 +17,9 @@ data class Lz4Options(
 ) {
     val blockSizeId: Int
         get() = when {
-            blockSize >= 4 * 1024 * 1024 -> 7
-            blockSize >= 1024 * 1024 -> 6
-            blockSize >= 256 * 1024 -> 5
+            blockSize >= 4 * SIZE_MIB -> 7
+            blockSize >= SIZE_MIB -> 6
+            blockSize >= 256 * SIZE_KIB -> 5
             else -> 4
         }
 }

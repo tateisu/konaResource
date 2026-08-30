@@ -1,9 +1,10 @@
+@file:Suppress("Filename", "MatchingDeclarationName")
+
 package jp.juggler.konaArchive.util
 
 import java.io.File
 import java.io.RandomAccessFile
 
-@Suppress("BlockingMethodInNonBlockingContext")
 class FileRandomAccess private constructor(
     private val access: RandomAccessFile,
     // subRangeで使われる
@@ -29,7 +30,6 @@ class FileRandomAccess private constructor(
     override val size: Long
         get() = access.length().minus(baseOffset)
             .coerceAtMost(clipSize ?: Long.MAX_VALUE)
-
 
     override fun seek(offset: Long) {
         pos = offset.coerceIn(0L, size)
@@ -80,18 +80,13 @@ class FileRandomAccess private constructor(
             length <= 0 -> 0
             else -> {
                 var nRead = 0
-                while (true) {
+                while (nRead < length) {
                     val remaining = length - nRead
-                    if (remaining <= 0) break
                     seekImpl()
                     val result = access.read(b, start + nRead, remaining)
-                    when {
-                        result <= 0L -> break
-                        result >= 0 -> {
-                            nRead += result
-                            pos += result
-                        }
-                    }
+                    if (result <= 0) return nRead
+                    nRead += result
+                    pos += result
                 }
                 nRead
             }
@@ -108,7 +103,7 @@ class FileRandomAccess private constructor(
             file = file,
             isReadOnly = true,
             baseOffset = baseOffset + start,
-            clipSize = end - start
+            clipSize = end - start,
         )
     }
 

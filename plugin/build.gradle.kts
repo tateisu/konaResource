@@ -14,7 +14,6 @@ java {
 
 dependencies {
     implementation(project(":common"))
-    implementation(libs.kotlinxCoroutinesCore)
     compileOnly(libs.kotlinGradlePluginLib)
     testImplementation(gradleTestKit())
     testImplementation(kotlin("test"))

@@ -1,6 +1,8 @@
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.plugins.signing.SigningExtension
+import io.gitlab.arturbosch.detekt.Detekt
+import io.gitlab.arturbosch.detekt.extensions.DetektExtension
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform) apply false
@@ -8,12 +10,29 @@ plugins {
     alias(libs.plugins.kotlinSerialization) apply false
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.kotest) apply false
+    alias(libs.plugins.detekt) apply false
 }
 
 group = "jp.juggler.konaResource"
 version = "0.1.3"
 
+val detektFormatting = libs.detektFormatting
+
 subprojects {
+    pluginManager.apply("io.gitlab.arturbosch.detekt")
+    dependencies {
+        add("detektPlugins", detektFormatting)
+    }
+    extensions.configure<DetektExtension> {
+        config.setFrom(rootProject.file("config/detekt/detekt.yml"))
+        buildUponDefaultConfig = true
+    }
+    tasks.withType<Detekt>().configureEach {
+        setSource(project.fileTree("src") {
+            include("**/*.kt")
+        })
+    }
+
     plugins.withId("maven-publish") {
         val publishing = extensions.getByType<PublishingExtension>()
         publishing.publications.withType<MavenPublication>().configureEach {

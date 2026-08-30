@@ -7,34 +7,26 @@ import net.jpountz.lz4.LZ4FrameOutputStream
 import net.jpountz.xxhash.XXHash32
 import net.jpountz.xxhash.XXHashFactory
 import okio.Buffer
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
+import java.io.InputStream
+import java.io.OutputStream
+
+private const val IO_CHUNK_SIZE = 64 * SIZE_KIB
 
 /** JVM-only implementation for the Gradle plugin and CLI build tools. */
 internal actual val defaultLz4Codec: Lz4Codec = Lz4CodecJvm
 
-private object Lz4CodecJvm: Lz4Codec {
+private object Lz4CodecJvm : Lz4Codec {
+    @Suppress("LongMethod", "CyclomaticComplexMethod")
     override fun compress(
         inputSize: Int,
         options: Lz4Options,
         input: (Buffer) -> Int,
-        output: (Buffer) -> Unit
-    ) : Buffer{
-        val source = Buffer()
-        while (source.size < inputSize) {
-            val before = source.size
-            val read = input(source)
-            val added = (source.size - before).toInt()
-            require(read == added) { "LZ4 input callback size mismatch" }
-            require(read > 0) { "LZ4 input ended before the expected input size was consumed" }
-        }
-        require(source.size == inputSize.toLong()) { "LZ4 input size mismatch" }
-
+        output: (Buffer) -> Unit,
+    ): Buffer {
         val factory = LZ4Factory.fastestInstance()
-        val compressor: LZ4Compressor = if (options.compressionLevel > 0) {
-            factory.highCompressor(options.compressionLevel)
-        } else {
-            factory.fastCompressor()
+        val compressor: LZ4Compressor = when {
+            options.compressionLevel > 0 -> factory.highCompressor(options.compressionLevel)
+            else -> factory.fastCompressor()
         }
         val features = buildList {
             // lz4-java does not support dependent blocks and always requires this flag.
@@ -47,48 +39,97 @@ private object Lz4CodecJvm: Lz4Codec {
         val knownSize = if (options.contentSizeFlag) inputSize.toLong() else -1L
         val checksum: XXHash32 = XXHashFactory.fastestInstance().hash32()
         val outputBuffer = Buffer()
-        val sourceBytes = source.readByteArray()
-        val encoded = ByteArrayOutputStream()
-        encoded.use { destination ->
-            LZ4FrameOutputStream(destination, blockSize, knownSize, compressor, checksum, *features).use { frame ->
-                var offset = 0
-                while (offset < sourceBytes.size) {
-                    val length = minOf(64 * 1024, sourceBytes.size - offset)
-                    frame.write(sourceBytes, offset, length)
-                    offset += length
-                    if (options.autoFlush) frame.flush()
-                }
+        val destination = object : OutputStream() {
+            override fun write(b: Int) {
+                outputBuffer.writeByte(b)
+                emitOutput()
+            }
+
+            override fun write(b: ByteArray, off: Int, len: Int) {
+                outputBuffer.write(b, off, len)
+                emitOutput()
+            }
+
+            private fun emitOutput() {
+                if (outputBuffer.size >= IO_CHUNK_SIZE) output(outputBuffer)
             }
         }
-        outputBuffer.write(encoded.toByteArray())
-        output(outputBuffer)
+        LZ4FrameOutputStream(
+            destination,
+            blockSize,
+            knownSize,
+            compressor,
+            checksum,
+            *features,
+        ).use { frame ->
+            val source = Buffer()
+            var consumedInput = 0
+            var inputFinished = false
+            while (!inputFinished && consumedInput < inputSize) {
+                when {
+                    input(source) <= 0 -> inputFinished = true
+                    else -> while (!source.exhausted()) {
+                        val step = minOf(IO_CHUNK_SIZE.toLong(), source.size).toInt()
+                        frame.write(source.readByteArray(step.toLong()))
+                        consumedInput += step
+                        if (options.autoFlush) frame.flush()
+                    }
+                }
+            }
+            require(!options.contentSizeFlag || consumedInput == inputSize) {
+                "LZ4 input size mismatch: expected $inputSize, got $consumedInput"
+            }
+        }
+        if (!outputBuffer.exhausted()) output(outputBuffer)
         return outputBuffer
     }
 
     override fun decompress(
         expectedSize: Int,
         input: (Buffer) -> Int,
-        output: (Buffer) -> Unit
-    ) : Buffer{
-        val source = Buffer()
-        while (true) {
-            val before = source.size
-            val read = input(source)
-            val added = (source.size - before).toInt()
-            require(read == added || read == -1 && source.size == before) { "LZ4 input callback size mismatch" }
-            if (read == -1) break
-            require(read > 0) { "LZ4 input callback returned no data" }
+        output: (Buffer) -> Unit,
+    ): Buffer {
+        val inputStream = object : InputStream() {
+            val source = Buffer()
+            val tmpArray = ByteArray(1)
+            var inputFinished = false
+
+            override fun read(): Int = when {
+                read(tmpArray, 0, 1) > 0 ->
+                    tmpArray[0].toInt().and(0xff)
+
+                else -> -1
+            }
+
+            override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+                return when {
+                    length <= 0 -> 0
+                    else -> {
+                        require(offset in 0..buffer.size)
+                        require(length in 0..buffer.size - offset)
+                        if (source.exhausted() && !inputFinished) {
+                            if (input(source) <= 0) inputFinished = true
+                        }
+                        when {
+                            source.exhausted() -> -1
+                            else -> source.read(
+                                buffer,
+                                offset,
+                                minOf(length.toLong(), source.size).toInt(),
+                            )
+                        }
+                    }
+                }
+            }
         }
         val outputBuffer = Buffer()
         var decodedSize = 0
-        val buffer = ByteArray(64 * 1024)
-        LZ4FrameInputStream(ByteArrayInputStream(source.readByteArray())).use { frame ->
+        LZ4FrameInputStream(inputStream).use { frame ->
+            val buffer = ByteArray(64 * SIZE_KIB)
             while (true) {
                 val read = frame.read(buffer)
-                if (read == -1) break
-                require(read > 0) { "LZ4 decompressor made no progress" }
+                if (read <= 0) break
                 decodedSize += read
-                require(decodedSize <= expectedSize) { "LZ4 output exceeds expected size" }
                 outputBuffer.write(buffer, 0, read)
                 output(outputBuffer)
             }

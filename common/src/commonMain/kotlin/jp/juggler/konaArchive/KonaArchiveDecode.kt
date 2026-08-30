@@ -15,6 +15,7 @@ fun ByteArray.openKonaArchive(): KonaArchive =
  * KonaRandomAccessからKonaArchiveを開く
  * 失敗したらKonaRandomAccessをcloseする
  */
+@Suppress("TooGenericExceptionCaught")
 fun KonaRandomAccess.decodeKonaArchiveOrClose(): KonaArchive = try {
     decodeKonaArchive()
 } catch (ex: Throwable) {
@@ -26,6 +27,7 @@ fun KonaRandomAccess.decodeKonaArchiveOrClose(): KonaArchive = try {
  * ランダムアクセス可能なストリームから KonaArchive をデコードして、
  * アーカイブ中のルートフォルダの KonaArchiveDir を返す
  */
+@Suppress("MagicNumber", "LongMethod")
 fun KonaRandomAccess.decodeKonaArchive(): KonaArchive {
     seek(0)
     val magic = readInt32("magic")
@@ -83,7 +85,7 @@ fun KonaRandomAccess.decodeKonaArchive(): KonaArchive {
         name = "names",
         expect = namesSha256,
         start = namesStart,
-        end = dirItemsStart
+        end = dirItemsStart,
     )
     checkSha256(
         name = "dirItems",
@@ -114,8 +116,8 @@ fun KonaRandomAccess.decodeKonaArchive(): KonaArchive {
                 callback(
                     readContentMeta(
                         name = "",
-                        entryOffset = offset.toInt()
-                    )
+                        entryOffset = offset.toInt(),
+                    ),
                 )
                 offset += entrySize
             }
@@ -123,7 +125,7 @@ fun KonaRandomAccess.decodeKonaArchive(): KonaArchive {
     )
 }
 
-
+@Suppress("MagicNumber")
 internal fun KonaRandomAccess.readContentMeta(
     name: String,
     entryOffset: Int,

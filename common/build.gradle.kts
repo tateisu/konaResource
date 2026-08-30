@@ -39,7 +39,6 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(libs.okio)
-            implementation(libs.kotlinxCoroutinesCore)
         }
         linuxX64Main.dependencies {
             implementation(libs.lz4Native)

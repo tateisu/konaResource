@@ -5,7 +5,7 @@ plugins {
 
 dependencies {
     implementation(project(":common"))
-    implementation(libs.kotlinxCoroutinesCore)
+    implementation(libs.kotlinxCli)
     implementation(libs.okio)
 }
 

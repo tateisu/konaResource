@@ -1,15 +1,28 @@
 package jp.juggler.konaArchive
 
 import jp.juggler.konaArchive.util.ErrnoException
+import jp.juggler.konaArchive.util.FILE_PERMISSION_U_RWX
 import jp.juggler.konaArchive.util.FileRandomAccess
 import jp.juggler.konaArchive.util.FileType
 import jp.juggler.konaArchive.util.fileType
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.pointed
 import kotlinx.cinterop.toKString
-import platform.posix.*
+import platform.posix.EEXIST
+import platform.posix.ENOENT
+import platform.posix.closedir
+import platform.posix.errno
+import platform.posix.getpid
+import platform.posix.mkdir
+import platform.posix.opendir
+import platform.posix.readdir
+import platform.posix.rmdir
+import platform.posix.unlink
 
-private object LinuxKonaArchiveTestUtils : KonaArchiveTestUtils {
+internal actual val konaArchiveTestUtils: KonaArchiveTestUtils = KonaArchiveTestUtilsLinux
+
+@Suppress("")
+private object KonaArchiveTestUtilsLinux : KonaArchiveTestUtils {
     private var nextTemporaryDirectoryId = 0
 
     fun joinPath(parent: String, child: String): String =
@@ -19,11 +32,10 @@ private object LinuxKonaArchiveTestUtils : KonaArchiveTestUtils {
         if (path.isEmpty() || path == "/") return
         val parent = path.substringBeforeLast('/', "")
         if (parent.isNotEmpty() && parent != path) makeDirectory(parent)
-        if (mkdir(path, 448U) != 0 && errno != EEXIST) {
+        if (mkdir(path, FILE_PERMISSION_U_RWX) != 0 && errno != EEXIST) {
             throw ErrnoException("Unable to create directory: $path")
         }
     }
-
 
     override fun tempDirectory(name: String): String {
         val path = "/tmp/kona-resource-$name-${getpid()}-${nextTemporaryDirectoryId++}"
@@ -46,12 +58,16 @@ private object LinuxKonaArchiveTestUtils : KonaArchiveTestUtils {
                     while (true) {
                         val entry = readdir(directory) ?: break
                         val name = entry.pointed.d_name.toKString()
-                        if (name != "." && name != "..") deleteTree(joinPath(path, name))
+                        if (name != "." && name != "..") {
+                            deleteTree(joinPath(path, name))
+                        }
                     }
                 } finally {
                     closedir(directory)
                 }
-                check(rmdir(path) == 0) { "Unable to remove directory: $path" }
+                check(rmdir(path) == 0) {
+                    "Unable to remove directory: $path"
+                }
             }
             // Regular, Other
             else -> deleteFile(path)
@@ -79,7 +95,7 @@ private object LinuxKonaArchiveTestUtils : KonaArchiveTestUtils {
     override fun encodeDirectory(
         root: String,
         archivePath: String,
-        previous: KonaArchive?
+        previous: KonaArchive?,
     ) {
         val writer = root.toKonaWriterEntry() as KonaWriterDirectory
         FileRandomAccess(archivePath, isReadOnly = false)
@@ -90,5 +106,3 @@ private object LinuxKonaArchiveTestUtils : KonaArchiveTestUtils {
         FileRandomAccess(path, isReadOnly = true)
             .decodeKonaArchiveOrClose()
 }
-
-internal actual val konaArchiveTestUtils: KonaArchiveTestUtils = LinuxKonaArchiveTestUtils

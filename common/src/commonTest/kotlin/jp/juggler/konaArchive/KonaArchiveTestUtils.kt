@@ -12,6 +12,7 @@ internal interface KonaArchiveTestUtils {
         archivePath: String,
         previous: KonaArchive? = null,
     )
+
     fun decodeArchive(path: String): KonaArchive
 }
 
