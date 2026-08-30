@@ -78,7 +78,7 @@ my $tag = "v$version";
 
 # タグがまだ存在しないことを確認する
 my $check = trim scalar `git tag --list '$tag' 2>&1`;
-length($check) and die "tag already exists? $check";
+length($check) and die "tag already exists? $check\n";
 
 my $answer = prompt(
     "version=$version, tag=$tag の作成とpushを行いますか? [y/N] ",
