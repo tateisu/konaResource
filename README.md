@@ -1,31 +1,31 @@
 # konaResource
 
-`konaResource` provides embed resource for Linux/x64 Kotlin/Native executables.
-- `plugin` is Gradle plugin that update embed resource.
-- `common` contains the KonaArchive archive format and the library to read embedded resources.
-- `sample1` is sample project that uses `plugin` and `common`
-- `cli` is cli tool for KonaArchive archive format.
+`konaResource` provides embedded resources for Linux/x64 Kotlin/Native executables.
+- `plugin` is a Gradle plugin that updates embedded resources.
+- `common` contains the KonaArchive format and the library for reading embedded resources.
+- `sample1` is a sample project that uses `plugin` and `common`.
+- `cli` is a CLI tool for the KonaArchive format.
 
-## 利用時のビルド設定
+## Build Configuration
 
 ```
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-    // konaResource プラグインを追加
+    // Add the konaResource plugin
     id("jp.juggler.konaResource") version "..."
 }
 kotlin {
     sourceSets {
         linuxX64Main.dependencies {
-            // konaResource common モジュールの追加
+            // Add the konaResource common module
             implementation("jp.juggler.konaResource:common:...")
         }
     }
 }
-// 圧縮設定やリソースフォルダの指定
+// Specify compression settings and resource directories
 konaResource{
-    // LZ4圧縮パラメータ。全てデフォルト値ありで、指定は必須ではない
-    // LZ4F compression level。0 はデフォルト高速圧縮、正数は LZ4HC、負数は fast acceleration
+    // LZ4 compression parameters. All parameters have default values and are optional.
+    // LZ4F compression level. 0 is the default fast compression, positive values use LZ4HC, and negative values use fast acceleration.
     lz4CompressionLevel = 0
     lz4BlockSizeID = 1MB
     lz4BlockMode = "LZ4F_blockLinked"
@@ -35,65 +35,65 @@ konaResource{
     lz4AutoFlush = false
     lz4FavorDecSpeed = true
 
-    // .o ファイルのファイル名やシンボル名に使われる
+    // Used for the .o file name and symbol name
     val name1 = "resources"
-    // リソースアーカイブの入力フォルダ
+    // Input directory for the resource archive
     val inDir1 = "src/resources"
     modules.add( name1 to inDir1 )
 
-    // name と入力フォルダのペアは複数登録できる
+    // Multiple name and input-directory pairs can be registered
     modules.add( "resourcesB" to "src/resourcesB" )
 }
 ```
 
-## 利用時のリソースアクセス
-- 例 'sample1/src/linuxX64Main/kotlin/jp/juggler/konaResource/sample1/Main.kt'
+## Accessing Embedded Resources
+- Example: `sample1/src/linuxX64Main/kotlin/jp/juggler/konaResource/sample1/Main.kt`
 
 ```kotlin
 val root = embedKonaArchive("sample").root
 val string = (root.getPath(path) as? KonaArchiveFile)?.string()
 ```
 
-## common の導入
-- pluginを導入済みであること
-- Linux/x64 Kotlin/Native 用のコードから使うこと
+## Using common
+- The plugin must be applied.
+- Use it from Linux/x64 Kotlin/Native code.
 
-## cliの使用
+## Using the CLI
 ```shell
-# archive の内容を一覧表示
+# List the contents of an archive
 ./gradlew :cli:run --args='list archive.bin'
 
-# ディレクトリを archive に変換
+# Convert a directory to an archive
 ./gradlew :cli:run --args='pack archive.bin input-directory'
 
-# 前回の archive を指定して同一コンテンツを再利用
+# Reuse identical content from a previous archive
 ./gradlew :cli:run --args='pack archive.bin input-directory --previous archive.bin'
 
-# archive を展開
+# Extract an archive
 ./gradlew :cli:run --args='extract archive.bin output-directory'
 ```
 
-## ビルド
+## Build
 
 ```shell
-# ビルド
+# Build
 ./gradlew build
 
-# テストを実行
+# Run tests
 ./gradlew check
 
-# sample1 の debug 実行ファイルをビルドして実行
+# Build and run the sample1 debug executable
 ./gradlew sample1:runDebugExecutableLinuxX64
 
-# sample1 の release 実行ファイルをビルドして確認
+# Build the sample1 release executable
 ./gradlew sample1:linkReleaseExecutableLinuxX64
 ```
 
-### sample1が使用するアーティファクトの切り替え
-- `sample1` はデフォルトではプロジェクト中の兄弟モジュールを使用します。
-- Gradle に `-Psample1Artifact=0.1.3` のように指定すると Maven Central で公開済みの artifact を使用します。
+### Switching the Artifact Used by sample1
+- By default, `sample1` uses sibling modules in this project.
+- Specify `-Psample1Artifact=0.1.3` for Gradle to use an artifact published to Maven Central.
 
-例:
+Example:
 ```
 ./gradlew -Psample1Artifact=0.1.3 clean sample1:runDebugExecutableLinuxX64
 ```
