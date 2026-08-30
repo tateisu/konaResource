@@ -72,13 +72,13 @@ dependencyResolutionManagement {
 }
 
 plugins {
-    id("jp.juggler.konaResource") version "0.1.1"
+    id("jp.juggler.konaResource") version "$version"
 }
 
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("jp.juggler.konaResource:common:0.1.1")
+            implementation("jp.juggler.konaResource:common:$version")
         }
     }
 }
@@ -92,11 +92,11 @@ Maven Central の user token は Gradle の project directory に保存せず、
 ```text
 CENTRAL_PORTAL_USERNAME
 CENTRAL_PORTAL_PASSWORD
-SIGNING_KEY
+GPG_KEY_01C52FD776E9651B84D63971A8E469517CB52830
 SIGNING_PASSWORD
 ```
 
-`maven-central` Environment を設定した tag を push すると、GitHub Actions が Central Portal へ upload します。`SIGNING_KEY` は ASCII-armored 形式の GPG 秘密鍵です。
+`maven-central` Environment を設定した tag を push すると、GitHub Actions が Central Portal へ upload します。`GPG_KEY_01C52FD776E9651B84D63971A8E469517CB52830` は ASCII-armored 形式の GPG 秘密鍵です。
 
 ## ビルド
 // TODO

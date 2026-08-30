@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "jp.juggler.konaResource"
-version = "0.1.1"
+version = "0.1.2"
 
 repositories {
     mavenCentral()
@@ -19,7 +19,7 @@ kotlin {
 }
 
 dependencies {
-    implementation("jp.juggler.konaResource:common:0.1.1")
+    implementation("jp.juggler.konaResource:common:0.1.2")
     implementation(libs.kotlinxCoroutinesCore)
     compileOnly(libs.kotlinGradlePluginLib)
     testImplementation(gradleTestKit())
