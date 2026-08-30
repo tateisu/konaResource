@@ -40,7 +40,7 @@ for (
     ["sample1" => ":sample1:properties"],
 ) {
     my($module,$task) = @$_;
-    my $version = trim `./gradlew -q $task | grep '^version:' | cut -d' ' -f2-`;
+    my $version = trim scalar `./gradlew -q $task | grep '^version:' | cut -d' ' -f2-`;
     next if not length $version;
     next if $version eq 'unspecified';
     $versions{$module}=$version;
@@ -70,14 +70,14 @@ $version =~ /\A\d+\.\d+\.\d+\z/ or die "version format incorrect: [$version]";
 say "version=[$version]";
 
 # 現在のブランチ名をチェック
-my $branch = trim `git branch --show-current 2>&1`;
+my $branch = trim scalar `git branch --show-current 2>&1`;
 ($branch eq "main") or die "現在のブランチがmainではありません。 $branch";
 
 # バージョン番号に合わせたタグ
 my $tag = "v$version";
 
 # タグがまだ存在しないことを確認する
-my $check = trim(`git tag --list '$tag' 2>&1`);
+my $check = trim scalar `git tag --list '$tag' 2>&1`;
 length($check) and die "tag already exists? $check";
 
 my $answer = prompt(
