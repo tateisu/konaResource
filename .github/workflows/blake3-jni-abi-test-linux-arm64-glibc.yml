@@ -19,6 +19,8 @@ jobs:
           distribution: temurin
           java-version: "21"
       - name: BUILD blake3Jni
+        env:
+          SKIP_NATIVE_TARGETS: "true"
         run: ./gradlew --no-daemon :blake3Jni:buildBlake3Jni
       - name: common:jvmTest
         env:
