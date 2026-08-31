@@ -22,7 +22,7 @@ tasks.configureEach {
 group = "jp.juggler.konaResource"
 version = rootProject.version
 
-val skipNativeTargets = providers.environmentVariable("SKIP_NATIVE_TARGETS").forUseAtConfigurationTime().orElse("false").get().toBoolean()
+val skipNativeTargets = System.getenv("SKIP_NATIVE_TARGETS")?.toBoolean() ?: false
 
 kotlin {
     jvm()
