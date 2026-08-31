@@ -18,8 +18,9 @@ $ ./gradlew -q build && readelf -d empty/build/bin/linuxX64/releaseExecutable/em
  0x0000000000000001 (NEEDED)             Shared library: [libpthread.so.0]
 ```
 
-The release executable built from `sample2` has these ELF `DT_NEEDED` entries. Notice:
-`sample1` references a published artifact, so `sample2` is used.
+The release executable built from `sample2` has these ELF `DT_NEEDED` entries. 
+
+Notice: `sample1` references a published artifact, so `sample2` is used.
 
 ```
 $ ./gradlew -q build && readelf -d sample2/build/bin/linuxX64/releaseExecutable/sample2.kexe | grep NEEDED | sort

@@ -25,3 +25,9 @@ jobs:
           file blake3Jni/build/native/libblake3_jni.so
           ldconfig -p | grep libblake3 || true
           ldd blake3Jni/build/native/libblake3_jni.so || true
+      - name: common:jvmTest
+        run: ./gradlew --no-daemon :common:jvmTest
+      - name: BUILD sample2:build
+        run: ./gradlew --no-daemon :sample2:build
+      - name: BENCHMARK
+        run: ./gradlew --no-daemon :benchmark:jvmBenchmark

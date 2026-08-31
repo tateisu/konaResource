@@ -21,7 +21,7 @@
 | 必須   | Windows | x86_64 | MSVC       | `foo.dll`      | 未計測                       |
 | 追加   | Windows | arm64  | MSVC       | `foo.dll`      | 未計測                       |
 
-次は Linux x64 musl だ。
+次は Linux    arm64   glibc だ。
 - github/workflows/blake3-jni-abi-test.yml を参考にする。これはLinux x86_64 glibc 用だ
 - プラットフォームごとにワークフローymlを書いて、個別に動作検証
 - git commit / push を許可する
