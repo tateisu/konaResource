@@ -18,7 +18,9 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
+      - name: BUILD blake3Jni
+        run: ./gradlew --no-daemon :blake3Jni:buildBlake3Jni
       - name: common:jvmTest
         run: ./gradlew --no-daemon :common:jvmTest
-      - name: BENCHMARK
+      - name: BENCHMARK (jvm)
         run: ./gradlew --no-daemon :benchmark:jvmBenchmark
