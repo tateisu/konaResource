@@ -4,8 +4,18 @@ config:
   validation: true
   warningsAsErrors: false
 
+exceptions:
+  TooGenericExceptionCaught:
+    active: false
+
 performance:
   SpreadOperator:
+    active: false
+
+style:
+  MagicNumber:
+    active: false
+  ReturnCount:
     active: false
 
 complexity:
@@ -14,10 +24,6 @@ complexity:
   LongParameterList:
     functionThreshold: 10
     constructorThreshold: 20
-
-style:
-  MagicNumber:
-    active: false
 
 formatting:
   active: true

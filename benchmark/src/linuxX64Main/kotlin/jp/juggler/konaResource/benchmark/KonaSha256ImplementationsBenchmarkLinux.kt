@@ -1,13 +1,14 @@
 package jp.juggler.konaResource.benchmark
 
 import jp.juggler.konaArchive.util.KonaDigest
+import jp.juggler.konaArchive.util.KonaSha256Intrinsics
 import kotlinx.benchmark.Benchmark
 import kotlinx.benchmark.Scope
 import kotlinx.benchmark.Setup
 import kotlinx.benchmark.State
 
 @State(Scope.Benchmark)
-open class KonaSha256Benchmark {
+open class KonaSha256ImplementationsBenchmarkLinux {
     private lateinit var files: List<ByteArray>
 
     @Setup
@@ -17,7 +18,7 @@ open class KonaSha256Benchmark {
     }
 
     @Benchmark
-    open fun defaultImplementation(): Int = digestAll { defaultSha256() }
+    open fun shaIntrinsics(): Int = digestAll { KonaSha256Intrinsics() }
 
     private fun digestAll(factory: () -> KonaDigest): Int {
         var result = 1
@@ -33,7 +34,3 @@ open class KonaSha256Benchmark {
             updateDigest(input, 0, input.size)
         }
 }
-
-internal expect fun benchmarkSourceFiles(): List<ByteArray>
-
-internal expect fun defaultSha256(): KonaDigest

@@ -26,6 +26,7 @@ private class PackCommand : Subcommand(
     )
     private val previous by option(
         type = ArgType.String,
+        fullName = "previous",
         shortName = "p",
         description = "Previous archive path",
     )

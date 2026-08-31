@@ -1,4 +1,4 @@
-package jp.juggler.konaResource.sample1
+package jp.juggler.konaResource.sample
 
 import jp.juggler.konaArchive.KonaArchiveDir
 import jp.juggler.konaArchive.KonaArchiveFile
@@ -6,8 +6,9 @@ import jp.juggler.konaResource.embedKonaArchive
 
 @Suppress("LongMethod")
 fun readSample() {
-    val root = embedKonaArchive("sample").root
-    println("sample root.size=${root.size}")
+    val symbolName = "res"
+    val root = embedKonaArchive(symbolName).root
+    println("[$symbolName] root.size=${root.size}")
     // directory access by index
     for (i in root.indices) {
         val entry = root[i]
@@ -78,9 +79,10 @@ fun readSample() {
 }
 
 fun readSampleB() {
-    val root = embedKonaArchive("sampleB").root
-    println("sampleB root.size=${root.size}")
-    println("sampleB bar.txt ${(root["bar.txt"] as? KonaArchiveFile)?.string()}")
+    val symbolName = "res2"
+    val root = embedKonaArchive(symbolName).root
+    println("[$symbolName] root.size=${root.size}")
+    println("[$symbolName] bar.txt ${(root["bar.txt"] as? KonaArchiveFile)?.string()}")
 }
 
 fun main() {

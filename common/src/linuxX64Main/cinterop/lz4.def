@@ -1,2 +1,2 @@
-headers = lz4_native.h
+headers = lz4/lz4_native.h
 package = jp.juggler.konaResource.lz4.cinterop

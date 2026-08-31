@@ -2,7 +2,7 @@ package jp.juggler.konaResource.benchmark
 
 import jp.juggler.konaArchive.util.FileRandomAccess
 import jp.juggler.konaArchive.util.KonaDigest
-import jp.juggler.konaArchive.util.KonaSha256Linux
+import jp.juggler.konaArchive.util.KonaSha256Intrinsics
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.memScoped
@@ -17,7 +17,7 @@ import platform.posix.opendir
 import platform.posix.readdir
 import platform.posix.stat
 
-internal actual fun defaultSha256(): KonaDigest = KonaSha256Linux()
+internal actual fun defaultSha256(): KonaDigest = KonaSha256Intrinsics()
 
 @OptIn(ExperimentalForeignApi::class)
 internal actual fun benchmarkSourceFiles(): List<ByteArray> =

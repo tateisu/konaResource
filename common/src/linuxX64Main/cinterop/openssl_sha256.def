@@ -1,3 +1,0 @@
-headers = openssl_sha256.h
-package = jp.juggler.konaResource.openssl
-linkerOpts = -L/usr/lib/x86_64-linux-gnu -lcrypto -ldl -lpthread -allow-shlib-undefined

@@ -1,9 +1,11 @@
 # konaResource
 
 `konaResource` provides embedded resources for Linux/x64 Kotlin/Native executables.
+
 - `plugin` is a Gradle plugin that updates embedded resources.
 - `common` contains the KonaArchive format and the library for reading embedded resources.
-- `sample1` is a sample project that uses `plugin` and `common`.
+- `sample1` is a sample project that uses published artifacts.
+- `sample2` is a sample project that uses sibling modules.
 - `cli` is a CLI tool for the KonaArchive format.
 
 ## Build Configuration
@@ -47,35 +49,38 @@ konaResource{
 ```
 
 ## Accessing Embedded Resources
-- Example: `sample1/src/linuxX64Main/kotlin/jp/juggler/konaResource/sample1/Main.kt`
+
+- Example: `sample1/src/linuxX64Main/kotlin/jp/juggler/konaResource/sample/Main.kt`
 
 ```kotlin
 val root = embedKonaArchive("sample").root
 val bytes = root.pathToFile(path)?.bytes()
 val string = root.pathToFile(path)?.string()
 val buffer = root.pathToFile(path)?.buffer()
-for( entry in root.pathToDir(path)!!){
+for (entry in root.pathToDir(path)!!) {
     println("name=${entry.name}")
 }
 ```
 
 ## Using common
+
 - The plugin must be applied.
 - Use it from Linux/x64 Kotlin/Native code.
 
 ## Using the CLI
+
 ```shell
-# List the contents of an archive
-./gradlew :cli:run --args='list archive.bin'
+# Deploy the CLI fat JAR and launcher
+./gradlew cli:deploy
 
 # Convert a directory to an archive
-./gradlew :cli:run --args='pack archive.bin input-directory'
+./konaArchive pack sample1Res.kona sample1/src/res
 
-# Reuse identical content from a previous archive
-./gradlew :cli:run --args='pack archive.bin input-directory --previous archive.bin'
+# List the contents of an archive
+./konaArchive list sample1Res.kona
 
 # Extract an archive
-./gradlew :cli:run --args='extract archive.bin output-directory'
+./konaArchive extract sample1Res.kona /tmp/sample1Res
 ```
 
 ## Build
@@ -84,21 +89,27 @@ for( entry in root.pathToDir(path)!!){
 # Build
 ./gradlew build
 
-# Run tests
+# tests
 ./gradlew check
 
-# Build and run the sample1 debug executable
+# Run sample1
+
+# Build and run the sample1 that uses published artifacts
 ./gradlew sample1:runDebugExecutableLinuxX64
+./gradlew sample1:runReleaseExecutableLinuxX64
 
-# Build the sample1 release executable
-./gradlew sample1:linkReleaseExecutableLinuxX64
-```
+# Build and run the sample2 that uses sibling modules
+./gradlew sample2:runDebugExecutableLinuxX64
+./gradlew sample2:runReleaseExecutableLinuxX64
 
-### Switching the Artifact Used by sample1
-- By default, `sample1` uses sibling modules in this project.
-- Specify `-Psample1Artifact=0.1.3` for Gradle to use an artifact published to Maven Central.
+# Run benchmarks
 
-Example:
-```
-./gradlew -Psample1Artifact=0.1.3 clean sample1:runDebugExecutableLinuxX64
+# Execute all benchmarks
+./gradlew :benchmark:benchmark
+
+# Executes benchmark for 'linuxX64'
+./gradlew :benchmark:linuxX64Benchmark
+
+# Execute benchmark for 'jvm'
+./gradlew :benchmark:jvmBenchmark
 ```

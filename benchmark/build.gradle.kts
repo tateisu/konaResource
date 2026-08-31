@@ -23,4 +23,16 @@ benchmark {
         register("jvm")
         register("linuxX64")
     }
+    configurations {
+        register("sha256Smoke") {
+            include("KonaSha256ImplementationsBenchmarkLinux")
+            // warmup iteration の回数
+            // 1以上でないとiterationが実行されない
+            warmups = 1
+            // measurement 時間 ≈ iterations(回数) × (iterationTime*iterationTimeUnit)(時間)
+            iterations = 1
+            iterationTime = 500
+            iterationTimeUnit = "ms"
+        }
+    }
 }

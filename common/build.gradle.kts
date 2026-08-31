@@ -10,6 +10,10 @@ plugins {
 group = "jp.juggler.konaResource"
 version = rootProject.version
 
+// warning, PIC options, optimization for this project.
+val nativeCCompilerOptions = listOf("-W", "-Wall", "-O3", "-fPIC")
+val cinteropDirectory = file("src/linuxX64Main/cinterop")
+
 val commonJavadocJar = tasks.register<Jar>("javadocJar") {
     description = "javadoc Jarを生成する(common)"
     archiveBaseName.set("common")
@@ -24,6 +28,7 @@ val jvmJavadocJar = tasks.register<Jar>("jvmJavadocJar") {
     from(rootProject.file("README.md"))
 }
 
+val blake3SourceDirectory = cinteropDirectory.resolve("blake3")
 val blake3SourceFiles = listOf(
     "blake3.c",
     "blake3_dispatch.c",
@@ -32,15 +37,15 @@ val blake3SourceFiles = listOf(
     "blake3_sse41_x86-64_unix.S",
     "blake3_avx2_x86-64_unix.S",
     "blake3_avx512_x86-64_unix.S",
-).map { file("src/linuxX64Main/cinterop/$it") }
+).map { blake3SourceDirectory.resolve(it) }
 
 val blake3BuildDirectory = layout.buildDirectory.dir("blake3")
 val blake3Archive = blake3BuildDirectory.map { it.file("libblake3.a") }
 val buildBlake3 = tasks.register("buildBlake3") {
     inputs.files(
         blake3SourceFiles +
-            file("src/linuxX64Main/cinterop/blake3.h") +
-            file("src/linuxX64Main/cinterop/blake3_impl.h"),
+            blake3SourceDirectory.resolve("blake3.h") +
+            blake3SourceDirectory.resolve("blake3_impl.h"),
     )
     outputs.file(blake3Archive)
     doLast {
@@ -58,8 +63,7 @@ val buildBlake3 = tasks.register("buildBlake3") {
         blake3SourceFiles.zip(objects).forEach { (source, objectFile) ->
             run(
                 "cc",
-                "-O3",
-                "-fPIC",
+                *nativeCCompilerOptions.toTypedArray(),
                 "-c",
                 source.absolutePath,
                 "-I${source.parentFile.absolutePath}",
@@ -72,6 +76,53 @@ val buildBlake3 = tasks.register("buildBlake3") {
                 "rcs",
                 blake3Archive.get().asFile.absolutePath,
                 *objects.map { it.absolutePath }.toTypedArray(),
+        )
+    }
+}
+
+val sha256IntrinsicsSourceFiles = listOf(
+    "SHA-Intrinsics/sha256.c",
+    "SHA-Intrinsics/sha256-x86.c",
+    "sha256_intrinsics.c",
+).map { cinteropDirectory.resolve(it) }
+val sha256IntrinsicsBuildDirectory = layout.buildDirectory.dir("sha256Intrinsics")
+val sha256IntrinsicsArchive = sha256IntrinsicsBuildDirectory.map { it.file("libsha256intrinsics.a") }
+val buildSha256Intrinsics = tasks.register("buildSha256Intrinsics") {
+    inputs.files(sha256IntrinsicsSourceFiles, file("src/linuxX64Main/cinterop/sha256_intrinsics.h"))
+    outputs.file(sha256IntrinsicsArchive)
+    doLast {
+        fun run(vararg command: String) {
+            check(ProcessBuilder(*command).inheritIO().start().waitFor() == 0) {
+                "Command failed: ${command.joinToString(" ")}"
+            }
+        }
+
+        val outputDirectory = sha256IntrinsicsBuildDirectory.get().asFile
+        outputDirectory.mkdirs()
+        val objects = sha256IntrinsicsSourceFiles.map { source ->
+            outputDirectory.resolve("${source.name}.o")
+        }
+        sha256IntrinsicsSourceFiles.zip(objects).forEach { (source, objectFile) ->
+            val sourceOptions = if (source.name == "sha256-x86.c") {
+                nativeCCompilerOptions + listOf("-msse4.1", "-msha")
+            } else {
+                nativeCCompilerOptions
+            }
+            run(
+                "cc",
+                *sourceOptions.toTypedArray(),
+                "-c",
+                source.absolutePath,
+                "-I${cinteropDirectory.absolutePath}",
+                "-o",
+                objectFile.absolutePath,
+            )
+        }
+        run(
+            "ar",
+            "rcs",
+            sha256IntrinsicsArchive.get().asFile.absolutePath,
+            *objects.map { it.absolutePath }.toTypedArray(),
         )
     }
 }
@@ -100,19 +151,24 @@ kotlin {
                 cinterops {
                     create("lz4") {
                         definitionFile.set(file("src/linuxX64Main/cinterop/lz4.def"))
-                        compilerOpts("-I${file("src/linuxX64Main/cinterop").absolutePath}")
-                    }
-                    create("opensslSha256") {
-                        definitionFile.set(file("src/linuxX64Main/cinterop/openssl_sha256.def"))
                         compilerOpts(
+                            *nativeCCompilerOptions.toTypedArray(),
                             "-I${file("src/linuxX64Main/cinterop").absolutePath}",
-                            "-I/usr/include",
-                            "-I/usr/include/x86_64-linux-gnu",
                         )
                     }
                     create("blake3") {
                         definitionFile.set(file("src/linuxX64Main/cinterop/blake3.def"))
-                        compilerOpts("-I${file("src/linuxX64Main/cinterop").absolutePath}")
+                        compilerOpts(
+                            *nativeCCompilerOptions.toTypedArray(),
+                            "-I${file("src/linuxX64Main/cinterop").absolutePath}",
+                        )
+                    }
+                    create("sha256Intrinsics") {
+                        definitionFile.set(file("src/linuxX64Main/cinterop/sha256_intrinsics.def"))
+                        compilerOpts(
+                            *nativeCCompilerOptions.toTypedArray(),
+                            "-I${file("src/linuxX64Main/cinterop").absolutePath}",
+                        )
                     }
                 }
             }
@@ -139,6 +195,10 @@ kotlin {
 
 tasks.named("cinteropBlake3LinuxX64") {
     dependsOn(buildBlake3)
+}
+
+tasks.named("cinteropSha256IntrinsicsLinuxX64") {
+    dependsOn(buildSha256Intrinsics)
 }
 
 tasks.named<Test>("jvmTest") {

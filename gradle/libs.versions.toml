@@ -7,6 +7,7 @@ kotlinGradlePluginLib = "2.1.20"
 kotlinxBenchmark = "0.4.19"
 ksp = "2.3.11" # kotest に必要
 detekt = "1.23.8"
+shadow = "9.6.1"
 kotlinxCli = "0.3.6"
 lz4Java = "1.8.0"
 lz4Native = "1.10.0.2"
@@ -21,6 +22,7 @@ kotlinxBenchmark = { id = "org.jetbrains.kotlinx.benchmark", version.ref = "kotl
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
 
 [libraries]
 kotestAssertions = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }

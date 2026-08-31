@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.kotlinJvm)
+    alias(libs.plugins.kotest)
     `java-gradle-plugin`
     `maven-publish`
 }
@@ -16,11 +17,13 @@ dependencies {
     implementation(project(":common"))
     compileOnly(libs.kotlinGradlePluginLib)
     testImplementation(gradleTestKit())
-    testImplementation(kotlin("test"))
+    testImplementation(libs.kotestFrameworkEngine)
+    testImplementation(libs.kotestAssertions)
+    testImplementation(libs.kotestRunner)
 }
 
 tasks.test {
-    useJUnit()
+    useJUnitPlatform()
 }
 
 gradlePlugin {

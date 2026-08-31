@@ -1,4 +1,4 @@
-#include "blake3.h"
+#include "blake3/blake3.h"
 #include <stdlib.h>
 
 static inline blake3_hasher* kona_blake3_new(void) {

@@ -19,6 +19,7 @@ dependencyResolutionManagement {
 rootProject.name = "konaResource-plugin-included"
 includeBuild("../common-build") {
     dependencySubstitution {
-        substitute(module("jp.juggler.konaResource:common")).using(project(":"))
+        // Keep the included JVM helper isolated from the published Native common module.
+        substitute(module("jp.juggler.konaResource:common-local")).using(project(":"))
     }
 }
