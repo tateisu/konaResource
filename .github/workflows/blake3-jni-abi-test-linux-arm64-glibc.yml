@@ -25,7 +25,12 @@ jobs:
       - name: common:jvmTest
         env:
           SKIP_NATIVE_TARGETS: "true"
-        run: ./gradlew --no-daemon :common:jvmTest
+        run: ./gradlew --no-daemon :common:jvmTest --info 2>&1 | tee /tmp/test.log || true
+      - name: Show test report if failed
+        if: failure()
+        run: cat /home/runner/work/konaResource/konaResource/common/build/reports/tests/jvmTest/index.html || true
+      - name: Show blake3Jni .so info
+        run: file blake3Jni/build/native/libblake3_jni.so && ldd blake3Jni/build/native/libblake3_jni.so || true
       - name: BENCHMARK (jvm)
         env:
           SKIP_NATIVE_TARGETS: "true"
