@@ -1,3 +1,5 @@
+@file:Suppress("MatchingDeclarationName")
+
 package jp.juggler.konaArchive.util
 
 import kotlinx.cinterop.ExperimentalForeignApi

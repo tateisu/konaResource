@@ -1,1 +1,2 @@
 *.bat text eol=crlf
+common/src/linuxX64Main/cinterop/SHA-Intrinsics/** text eol=crlf

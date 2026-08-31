@@ -32,9 +32,6 @@ internal fun listDirectory(path: String): List<KonaWriterEntry> = memScoped {
     }
 }
 
-/**
- * pathをKonaWriterEntryに変換する
- */
 fun String.toKonaWriterEntry(): KonaWriterEntry {
     val source = this
     return when (fileType(source)) {

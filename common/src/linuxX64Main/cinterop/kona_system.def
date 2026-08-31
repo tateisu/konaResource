@@ -1,0 +1,2 @@
+headers = kona_system.h
+package = jp.juggler.konaResource.system.cinterop

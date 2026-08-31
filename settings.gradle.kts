@@ -29,6 +29,7 @@ dependencyResolutionManagement {
 rootProject.name = "konaResource"
 
 include(
+    ":blake3Jni",
     ":common",
     ":plugin",
     ":sample1",

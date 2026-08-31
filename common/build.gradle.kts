@@ -1,4 +1,6 @@
 import org.gradle.jvm.tasks.Jar
+import org.gradle.language.jvm.tasks.ProcessResources
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -137,7 +139,11 @@ publishing {
 }
 
 kotlin {
-    jvm()
+    jvm {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_17)
+        }
+    }
     linuxX64()
     sourceSets {
         commonMain.dependencies {
@@ -170,11 +176,17 @@ kotlin {
                             "-I${file("src/linuxX64Main/cinterop").absolutePath}",
                         )
                     }
+                    create("konaSystem") {
+                        definitionFile.set(file("src/linuxX64Main/cinterop/kona_system.def"))
+                        compilerOpts(
+                            *nativeCCompilerOptions.toTypedArray(),
+                            "-I${file("src/linuxX64Main/cinterop").absolutePath}",
+                        )
+                    }
                 }
             }
         }
         jvmMain.dependencies {
-            implementation(libs.commonsCodec)
             implementation(libs.lz4Java)
         }
         commonTest.dependencies {
@@ -202,5 +214,13 @@ tasks.named("cinteropSha256IntrinsicsLinuxX64") {
 }
 
 tasks.named<Test>("jvmTest") {
+    dependsOn(":blake3Jni:buildBlake3Jni")
     useJUnitPlatform()
+}
+
+tasks.named<ProcessResources>("jvmProcessResources") {
+    dependsOn(":blake3Jni:buildBlake3Jni")
+    from(rootProject.file("blake3Jni/build/native/libblake3_jni.so")) {
+        into("jp/juggler/konaArchive/native/linux-x86_64")
+    }
 }

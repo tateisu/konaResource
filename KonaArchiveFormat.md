@@ -1,67 +1,67 @@
 # KonaArchive file format
 
-## version 2 ファイル構造
+## Version 2 File Structure
 
 ```
 - MAGIC 0x0123CDEF
-- compressedData: byte[contentMeta][*] // contentMeta が参照する圧縮データの領域
-- contentMeta[contentCount] // 1要素 76 bytes
-  - compressedStart: Int32 // compressedData 開始位置のファイル先頭からのバイトオフセット
+- compressedData: byte[contentMeta][*] // Region of compressed data referenced by contentMeta
+- contentMeta[contentCount] // 76 bytes per element
+  - compressedStart: Int32 // Byte offset from the beginning of the file where compressedData starts
   - compressedDigest: Byte[32]
   - compressedSize: Int32
   - uncompressedDigest: Byte[32]
   - uncompressedSize: Int32
 - names: pair(nameBytesLength:Int32, nameBytes[nameBytesLength])[*]
    - list of pair(nameBytesLength:Int32, nameBytes[nameBytesLength])
-   - nameBytes はUTF-8エンコード
-- dirItems[dirItemsCount] // 1要素 12 bytes
-  **フォルダごとに** 文字コード順にソート済み。bsearch可能
-  要素は以下の2種類
+   - nameBytes is encoded in UTF-8
+- dirItems[dirItemsCount] // 12 bytes per element
+   **Sorted in character-code order for each folder; binary-searchable.**
+   There are two kinds of elements:
   - FileItem(
-        // names要素のファイル先頭からのバイトオフセット
+        // Byte offset from the beginning of the file to a names element
         nameOffset: Int32
-        // contentMeta要素のファイル先頭からのバイトオフセット
-        // 最上位ビットが0であることを示す (FileItem)
+        // Byte offset from the beginning of the file to a contentMeta element
+        // The most significant bit is 0 (FileItem)
         entryOffset: Int32
-        reserved: Int32  // 未使用。常に0
+        reserved: Int32  // Unused; always 0
     )
   - DirectoryItem(
-        nameOffset: Int32 // names要素のファイル先頭からのバイトオフセット
-        // dirItemsのインデクス or 0x80000000
-        // 最上位ビットが1であることが DirectoryItem であることを示す
+         nameOffset: Int32 // Byte offset from the beginning of the file to a names element
+         // dirItems index or 0x80000000
+         // The most significant bit is 1 (DirectoryItem)
         storedDirIndex :Int32 = dirIndex | 0x80000000
-        dirSize: Int32 // フォルダ中の要素数
-        // Note: 要素数0のディレクトリは空ディレクトリなので dirIndex は常に0となる
+         dirSize: Int32 // Number of elements in the folder
+         // Note: An empty directory has no elements, so dirIndex is always 0.
 
     )
 - header
-  - compressedDataStart:Int32 // compressedData先頭の、ファイル先頭からのバイトオフセット
-  - contentMetaStart:Int32 // contentMeta先頭の、ファイル先頭からのバイトオフセット
-  - contentMetaDigest: Byte[32] // contentMeta 全体のハッシュダイジェスト
-  - namesStart:Int32 // names先頭の、ファイル先頭からのバイトオフセット
-  - namesDigest: Byte[32] // names 全体のハッシュダイジェスト
-  - dirItemsStart:Int32 // dirItems先頭の、ファイル先頭からのバイトオフセット
-  - dirItemsCount:Int32 // dirItems 配列の要素数
-  - dirItemsDigest: Byte[32] // dirItems 全体のハッシュダイジェスト
-  - rootDirIndex:Int32 // ルートディレクトリ要素リストの開始位置。dirItems要素のインデクス。
-  - rootDirSize:Int32 // ルートディレクトリ要素リストの要素数。
+  - compressedDataStart:Int32 // Byte offset from the beginning of the file to compressedData
+  - contentMetaStart:Int32 // Byte offset from the beginning of the file to contentMeta
+  - contentMetaDigest: Byte[32] // Hash digest of all contentMeta elements
+  - namesStart:Int32 // Byte offset from the beginning of the file to names
+  - namesDigest: Byte[32] // Hash digest of all names elements
+  - dirItemsStart:Int32 // Byte offset from the beginning of the file to dirItems
+  - dirItemsCount:Int32 // Number of elements in the dirItems array
+  - dirItemsDigest: Byte[32] // Hash digest of all dirItems elements
+  - rootDirIndex:Int32 // Starting index of the root directory element list in dirItems
+  - rootDirSize:Int32 // Number of elements in the root directory element list
 - headerDigest: Byte[32]
-- version: Int32 // データスキーマバージョン。現状は1のみが有効。
+- version: Int32 // Data schema version; currently versions 1 and 2 are valid.
 ```
 
-- ファイル構造はメタデータ後置パターン。
-- Int32 はすべて little-endian で格納する。
-- 圧縮アルゴリズムは LZ4 固定
-- ダイジェストアルゴリズムはバージョン2以降は BLAKE3-256、バージョン1はSHA-256。
-- contentCount は重複排除後のユニークなコンテンツ数。
-- dirItemsはフラットな配列にしているが、ディレクトリごとにどの範囲を参照するかが異なる
+- The file structure follows a metadata-at-the-end pattern.
+- All Int32 values are stored in little-endian order.
+- The compression algorithm is fixed to LZ4.
+- The digest algorithm is BLAKE3-256 for version 2 and later, and SHA-256 for version 1.
+- contentCount is the number of unique contents after deduplication.
+- dirItems is a flat array, but each directory references a different range within it.
 
-## version 1 =>2 ファイル構造とマイグレーション
+## Version 1 to 2 File Structure and Migration
 
-version2とversion1の違いの違いは以下の通り。
-- ダイジェストアルゴリズムはバージョン2以降は BLAKE3-256、バージョン1はSHA-256。
+The difference between version 2 and version 1 is as follows:
+- The digest algorithm is BLAKE3-256 for version 2 and later, and SHA-256 for version 1.
 
-マイグレーションは以下のようにした。
-- pluginやcliは常にversion2を出力する。
-- cliは旧バージョンのファイルを読める。SHA-256ダイジェスト計算は引き続きJVM実装のものを使う。
-- LinuxX64でcommonモジュールからversion1のアーカイブを読む時はOpenSSLではなく代替実装を使う。
+Migration is handled as follows:
+- The plugin and CLI always output version 2.
+- The CLI can read files from older versions. SHA-256 digest calculation continues to use the JVM implementation.
+- When the common module reads a version 1 archive on Linux x64, it uses an alternative implementation instead of OpenSSL.

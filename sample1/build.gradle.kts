@@ -12,6 +12,17 @@ konaResource {
     // --- add pairs of resouce symbol name and resource input directory
     modules.add("res" to "src/res")
     modules.add("res2" to "src/res2")
+
+//    // LZ4 compression parameters. All parameters have default values and are optional.
+//    // LZ4F compression level. 0 is the default fast compression, positive values use LZ4HC, and negative values use fast acceleration.
+//    lz4CompressionLevel = 0
+//    lz4BlockSizeID = 1MB
+//    lz4BlockMode = "LZ4F_blockLinked"
+//    lz4ContentSizeFlag = true
+//    lz4ContentChecksumFlag	= true
+//    lz4blockChecksumFlag = true
+//    lz4AutoFlush = false
+//    lz4FavorDecSpeed = true
 }
 // =======================================
 

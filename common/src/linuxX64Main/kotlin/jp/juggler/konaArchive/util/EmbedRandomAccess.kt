@@ -1,11 +1,11 @@
 package jp.juggler.konaArchive.util
 
+import jp.juggler.konaResource.system.cinterop.kona_memcpy
 import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.toCPointer
 import kotlinx.cinterop.usePinned
-import platform.posix.memcpy
 
 /**
  * 実行ファイル内のバイト領域を直接読む KonaRandomAccess
@@ -43,7 +43,7 @@ class EmbedRandomAccess(
         val length = minOf((end - start).toLong(), available).toInt()
         if (length <= 0) return 0
         b.usePinned { destination ->
-            memcpy(
+            kona_memcpy(
                 destination.addressOf(start),
                 (addressRange.first + pos).toCPointer<ByteVar>(),
                 length.toULong(),

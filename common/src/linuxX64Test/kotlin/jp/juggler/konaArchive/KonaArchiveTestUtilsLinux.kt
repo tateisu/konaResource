@@ -19,8 +19,7 @@ import platform.posix.readdir
 import platform.posix.rmdir
 import platform.posix.unlink
 
-internal actual val konaArchiveTestUtils: KonaArchiveTestUtils =
-    KonaArchiveTestUtilsLinux
+internal actual val konaArchiveTestUtils: KonaArchiveTestUtils = KonaArchiveTestUtilsLinux
 
 @OptIn(ExperimentalForeignApi::class)
 @Suppress("TooManyFunctions")
@@ -48,8 +47,7 @@ private object KonaArchiveTestUtilsLinux : KonaArchiveTestUtils {
     private fun sourceFilesRecursive(path: String): List<TestSourceFile> = when (fileType(path)) {
         FileType.Directory -> {
             val result = mutableListOf<TestSourceFile>()
-            val directory = opendir(path)
-                ?: throw ErrnoException("Unable to open directory: $path")
+            val directory = opendir(path) ?: throw ErrnoException("Unable to open directory: $path")
             try {
                 while (true) {
                     val entry = readdir(directory) ?: break
@@ -77,10 +75,10 @@ private object KonaArchiveTestUtilsLinux : KonaArchiveTestUtils {
         FileType.Other -> emptyList()
     }
 
-    fun joinPath(parent: String, child: String): String =
+    private fun joinPath(parent: String, child: String): String =
         if (parent.endsWith('/')) parent + child else "$parent/$child"
 
-    fun makeDirectory(path: String) {
+    private fun makeDirectory(path: String) {
         if (path.isEmpty() || path == "/") return
         val parent = path.substringBeforeLast('/', "")
         if (parent.isNotEmpty() && parent != path) makeDirectory(parent)
@@ -100,28 +98,22 @@ private object KonaArchiveTestUtilsLinux : KonaArchiveTestUtils {
 
     override fun resolve(parent: String, child: String): String = joinPath(parent, child)
 
-    @OptIn(ExperimentalForeignApi::class)
     override fun deleteTree(path: String) {
         when (fileType(path)) {
             FileType.Directory -> {
-                val directory = opendir(path)
-                    ?: throw ErrnoException("Unable to open directory: $path")
+                val directory = opendir(path) ?: throw ErrnoException("Unable to open directory: $path")
                 try {
                     while (true) {
                         val entry = readdir(directory) ?: break
                         val name = entry.pointed.d_name.toKString()
-                        if (name != "." && name != "..") {
-                            deleteTree(joinPath(path, name))
-                        }
+                        if (name != "." && name != "..") deleteTree(joinPath(path, name))
                     }
                 } finally {
                     closedir(directory)
                 }
-                check(rmdir(path) == 0) {
-                    "Unable to remove directory: $path"
-                }
+                check(rmdir(path) == 0) { "Unable to remove directory: $path" }
             }
-            // Regular, Other
+
             else -> deleteFile(path)
         }
     }
@@ -144,17 +136,12 @@ private object KonaArchiveTestUtilsLinux : KonaArchiveTestUtils {
         }
     }
 
-    override fun encodeDirectory(
-        root: String,
-        archivePath: String,
-        previous: KonaArchive?,
-    ) {
+    override fun encodeDirectory(root: String, archivePath: String, previous: KonaArchive?) {
         val writer = root.toKonaWriterEntry() as KonaWriterDirectory
         FileRandomAccess(archivePath, isReadOnly = false)
             .encodeKonaArchive(writer, previous = previous)
     }
 
     override fun decodeArchive(path: String): KonaArchive =
-        FileRandomAccess(path, isReadOnly = true)
-            .decodeKonaArchiveOrClose()
+        FileRandomAccess(path, isReadOnly = true).decodeKonaArchiveOrClose()
 }

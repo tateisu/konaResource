@@ -27,9 +27,7 @@ class FileRandomAccess private constructor(
     val path: String,
     var fileDescriptor: Int,
     override val isReadOnly: Boolean,
-    // subRangeで使う
     val baseOffset: Long,
-    // subRangeで使う
     val clipSize: Long?,
 ) : KonaRandomAccess() {
     constructor(path: String, isReadOnly: Boolean) : this(
@@ -61,9 +59,7 @@ class FileRandomAccess private constructor(
 
     private fun ensureSize(width: Int, name: String) {
         when {
-            fileDescriptor < 0 ->
-                error("fileDescriptor was closed.")
-
+            fileDescriptor < 0 -> error("fileDescriptor was closed.")
             isReadOnly && pos + width > size ->
                 error("missing $name. pos=$pos + width=$width > size=$size")
         }
@@ -94,11 +90,7 @@ class FileRandomAccess private constructor(
         pos = pos.coerceAtMost(size)
     }
 
-    override fun writeByteArray(
-        b: ByteArray,
-        start: Int,
-        end: Int,
-    ) {
+    override fun writeByteArray(b: ByteArray, start: Int, end: Int) {
         if (isReadOnly) error("stream is read-only.")
         checkRange(b.size, start, end)
         val length = end - start
@@ -129,11 +121,7 @@ class FileRandomAccess private constructor(
         }
     }
 
-    override fun readByteArray(
-        b: ByteArray,
-        start: Int,
-        end: Int,
-    ): Int {
+    override fun readByteArray(b: ByteArray, start: Int, end: Int): Int {
         checkRange(b.size, start, end)
         val length = end - start
         if (length <= 0) return 0
@@ -162,7 +150,6 @@ class FileRandomAccess private constructor(
                     }
 
                     result == 0L -> done = true
-
                     else -> {
                         nRead += result.toInt()
                         pos += result
@@ -177,11 +164,7 @@ class FileRandomAccess private constructor(
         require(end <= size && start in 0L..end) { "Invalid sub-range: [$start, $end)" }
         return FileRandomAccess(
             path = path,
-            fileDescriptor = open(
-                path,
-                O_RDONLY,
-                438,
-            ),
+            fileDescriptor = open(path, O_RDONLY, 438),
             isReadOnly = true,
             baseOffset = baseOffset + start,
             clipSize = end - start,

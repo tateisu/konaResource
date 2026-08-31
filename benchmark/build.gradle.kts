@@ -1,6 +1,22 @@
+import org.gradle.api.tasks.JavaExec
+
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.kotlinxBenchmark)
+}
+
+tasks.configureEach {
+    if (name == "jvmBenchmark" || name == "jvmSmokeBenchmark") {
+        dependsOn(":blake3Jni:buildBlake3Jni")
+        doFirst {
+            if (this is JavaExec) {
+                systemProperty(
+                    "kona.blake3.jni.path",
+                    rootProject.file("blake3Jni/build/native/libblake3_jni.so").absolutePath,
+                )
+            }
+        }
+    }
 }
 
 group = "jp.juggler.konaResource"
@@ -24,8 +40,13 @@ benchmark {
         register("linuxX64")
     }
     configurations {
-        register("sha256Smoke") {
-            include("KonaSha256ImplementationsBenchmarkLinux")
+        named("main") {
+            warmups = 3
+            iterations = 3
+            iterationTime = 500
+            iterationTimeUnit = "ms"
+        }
+        register("smoke") {
             // warmup iteration の回数
             // 1以上でないとiterationが実行されない
             warmups = 1
