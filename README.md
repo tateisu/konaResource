@@ -15,6 +15,7 @@
 
 ## Limitations
 - Linux ARM support is not currently available because the developer does not have access to a Linux ARM machine.
+- Linux musl (e.g., Alpine Linux) is not supported for Kotlin/Native builds. The konanc toolchain and its bundled LLVM distribution depend on glibc-specific symbols (`mallinfo`, `backtrace`, `backtrace_symbols_fd`) that are unavailable in musl libc, making it impossible to compile or run Kotlin/Native programs on Alpine. See [KT-38891](https://youtrack.jetbrains.com/issue/KT-38891) for upstream status.
 
 ## Build Configuration
 
