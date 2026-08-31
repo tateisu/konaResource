@@ -3,19 +3,32 @@
 
 # Blake3 JNI の複数環境サポート
 
-## Github Actions に環境別テストマトリクスを書く
+## Github Actions に環境別テストマトリクスを書く ✓
 
+- 各ABI個別のworkflowファイルを作成（後で合成可能）
+- Linux x64 musl のスコア: `3861.073 ± 115.546 ops/s`
+- Kotlin/Native は glibc 前提のため musl では動作せず。JVMテスト/benchmarkのみ実行
 
+対象環境:
 
-対象環境
-```
-Windows x64
-Windows arm64
-Linux x64 glibc
-Linux arm64 glibc
-Linux x64 musl
-macOS universal2
-```
+| 優先度 | OS      | CPU    | ABI / libc | 成果物例       | Blake3Jni benchmark          |
+|--------|---------|--------|------------|----------------|------------------------------|
+| 必須   | Linux   | x86_64 | glibc      | `libfoo.so`    | `4877.359 ± 122.289 ops/s`   |
+| 追加   | Linux   | x86_64 | musl       | `libfoo.so`    | `3861.073 ± 115.546 ops/s`   |
+| 必須   | Linux   | arm64  | glibc      | `libfoo.so`    | 未計測                       |
+| 必須   | macOS   | x86_64 | Darwin     | `libfoo.dylib` | 未計測                       |
+| 必須   | macOS   | arm64  | Darwin     | `libfoo.dylib` | 未計測                       |
+| 必須   | Windows | x86_64 | MSVC       | `foo.dll`      | 未計測                       |
+| 追加   | Windows | arm64  | MSVC       | `foo.dll`      | 未計測                       |
+
+次は Linux x64 musl だ。
+- github/workflows/blake3-jni-abi-test.yml を参考にする。これはLinux x86_64 glibc 用だ
+- プラットフォームごとにワークフローymlを書いて、個別に動作検証
+- git commit / push を許可する
+- gh 操作でのワークフロー開始を許可する
+- ワークフローが正常終了したらこの文書の表に Blake3Jni benchmark スコアを記載する
+
+# 資料
 
 自作した Gradle pluginを複数のABIに対応させたいが、試験環境はない。
 リモート環境を貸してくれるサービスはあるか？
@@ -99,16 +112,6 @@ Gradle 自身も GitHub Actions での matrix build を公式に案内してい�
 
 
 結論として、**「Gradle が公式に動作確認している主要環境をほぼ全部」なら 7 ABI を用意**するのが分かりやすいです。現行 Gradle 9.7 は Windows / Linux / macOS の AMD64・AArch64 を中心に、Alpine Linux も公式対象にしています。([Gradle][1])
-
-| 優先度 | OS      | CPU    | ABI / libc | 成果物例       |
-|--------|---------|--------|------------|----------------|
-| 必須   | Windows | x86_64 | MSVC       | `foo.dll`      |
-| 追加   | Windows | arm64  | MSVC       | `foo.dll`      |
-| 必須   | Linux   | x86_64 | glibc      | `libfoo.so`    |
-| 必須   | Linux   | arm64  | glibc      | `libfoo.so`    |
-| 追加   | Linux   | x86_64 | musl       | `libfoo.so`    |
-| 必須   | macOS   | x86_64 | Darwin     | `libfoo.dylib` |
-| 必須   | macOS   | arm64  | Darwin     | `libfoo.dylib` |
 
 したがって、まず **5ターゲット**、
 
@@ -237,5 +240,4 @@ aarch64 / arm64      → arm64
 [3]: https://docs.oracle.com/en/java/javase/25/docs/specs/jni/design.html?utm_source=chatgpt.com "Java Native Interface Specification: 2 - Design Overview"
 [4]: https://docs.gradle.org/current/javadoc/org/gradle/platform/Architecture.html?utm_source=chatgpt.com "Architecture (Gradle API 9.6.1)"
 [5]: https://docs.oracle.com/en/java/javase/25/migrate/migrating-jdk-8-later-jdk-releases.html?utm_source=chatgpt.com "Migrating from JDK 8 to Later JDK Releases"
-
 
