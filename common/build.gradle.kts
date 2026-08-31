@@ -1,6 +1,6 @@
 import org.gradle.jvm.tasks.Jar
-import org.gradle.language.jvm.tasks.ProcessResources
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -12,9 +12,14 @@ plugins {
 group = "jp.juggler.konaResource"
 version = rootProject.version
 
+// -Pmacos=true を指定したときのみ macosArm64 ターゲットを含める。
+// macOS ターゲットの cinterop は macOS ホストでしか処理できないため、
+// 他ホストでのビルドではターゲットごと除外する。
+val enableMacos: Boolean = (findProperty("macos") as? String)?.toBoolean() == true
+
 // warning, PIC options, optimization for this project.
 val nativeCCompilerOptions = listOf("-W", "-Wall", "-O3", "-fPIC")
-val cinteropDirectory = file("src/linuxX64Main/cinterop")
+val cinteropDirectory = file("src/nativeMain/cinterop")
 
 val commonJavadocJar = tasks.register<Jar>("javadocJar") {
     description = "javadoc Jarを生成する(common)"
@@ -28,105 +33,6 @@ val jvmJavadocJar = tasks.register<Jar>("jvmJavadocJar") {
     archiveBaseName.set("common-jvm")
     archiveClassifier.set("javadoc")
     from(rootProject.file("README.md"))
-}
-
-val blake3SourceDirectory = cinteropDirectory.resolve("blake3")
-val blake3SourceFiles = listOf(
-    "blake3.c",
-    "blake3_dispatch.c",
-    "blake3_portable.c",
-    "blake3_sse2_x86-64_unix.S",
-    "blake3_sse41_x86-64_unix.S",
-    "blake3_avx2_x86-64_unix.S",
-    "blake3_avx512_x86-64_unix.S",
-).map { blake3SourceDirectory.resolve(it) }
-
-val blake3BuildDirectory = layout.buildDirectory.dir("blake3")
-val blake3Archive = blake3BuildDirectory.map { it.file("libblake3.a") }
-val buildBlake3 = tasks.register("buildBlake3") {
-    inputs.files(
-        blake3SourceFiles +
-            blake3SourceDirectory.resolve("blake3.h") +
-            blake3SourceDirectory.resolve("blake3_impl.h"),
-    )
-    outputs.file(blake3Archive)
-    doLast {
-        fun run(vararg command: String) {
-            check(ProcessBuilder(*command).inheritIO().start().waitFor() == 0) {
-                "Command failed: ${command.joinToString(" ")}"
-            }
-        }
-
-        val outputDirectory = blake3BuildDirectory.get().asFile
-        outputDirectory.mkdirs()
-        val objects = blake3SourceFiles.map { source ->
-            outputDirectory.resolve("${source.name}.o")
-        }
-        blake3SourceFiles.zip(objects).forEach { (source, objectFile) ->
-            run(
-                "cc",
-                *nativeCCompilerOptions.toTypedArray(),
-                "-c",
-                source.absolutePath,
-                "-I${source.parentFile.absolutePath}",
-                "-o",
-                objectFile.absolutePath,
-            )
-        }
-        run(
-            "ar",
-                "rcs",
-                blake3Archive.get().asFile.absolutePath,
-                *objects.map { it.absolutePath }.toTypedArray(),
-        )
-    }
-}
-
-val sha256IntrinsicsSourceFiles = listOf(
-    "SHA-Intrinsics/sha256.c",
-    "SHA-Intrinsics/sha256-x86.c",
-    "sha256_intrinsics.c",
-).map { cinteropDirectory.resolve(it) }
-val sha256IntrinsicsBuildDirectory = layout.buildDirectory.dir("sha256Intrinsics")
-val sha256IntrinsicsArchive = sha256IntrinsicsBuildDirectory.map { it.file("libsha256intrinsics.a") }
-val buildSha256Intrinsics = tasks.register("buildSha256Intrinsics") {
-    inputs.files(sha256IntrinsicsSourceFiles, file("src/linuxX64Main/cinterop/sha256_intrinsics.h"))
-    outputs.file(sha256IntrinsicsArchive)
-    doLast {
-        fun run(vararg command: String) {
-            check(ProcessBuilder(*command).inheritIO().start().waitFor() == 0) {
-                "Command failed: ${command.joinToString(" ")}"
-            }
-        }
-
-        val outputDirectory = sha256IntrinsicsBuildDirectory.get().asFile
-        outputDirectory.mkdirs()
-        val objects = sha256IntrinsicsSourceFiles.map { source ->
-            outputDirectory.resolve("${source.name}.o")
-        }
-        sha256IntrinsicsSourceFiles.zip(objects).forEach { (source, objectFile) ->
-            val sourceOptions = if (source.name == "sha256-x86.c") {
-                nativeCCompilerOptions + listOf("-msse4.1", "-msha")
-            } else {
-                nativeCCompilerOptions
-            }
-            run(
-                "cc",
-                *sourceOptions.toTypedArray(),
-                "-c",
-                source.absolutePath,
-                "-I${cinteropDirectory.absolutePath}",
-                "-o",
-                objectFile.absolutePath,
-            )
-        }
-        run(
-            "ar",
-            "rcs",
-            sha256IntrinsicsArchive.get().asFile.absolutePath,
-            *objects.map { it.absolutePath }.toTypedArray(),
-        )
-    }
 }
 
 publishing {
@@ -145,82 +51,70 @@ kotlin {
         }
     }
     linuxX64()
+    linuxArm64()
+    if (enableMacos) {
+        macosArm64()
+    }
+    mingwX64()
+
+    fun KotlinNativeTarget.configureCinterops() {
+        compilations.getByName("main") {
+            cinterops {
+                create("lz4") {
+                    definitionFile.set(cinteropDirectory.resolve("lz4.def"))
+                    compilerOpts(
+                        *nativeCCompilerOptions.toTypedArray(),
+                        "-I${cinteropDirectory.absolutePath}",
+                    )
+                }
+                create("blake3") {
+                    definitionFile.set(cinteropDirectory.resolve("blake3.def"))
+                    compilerOpts(
+                        *nativeCCompilerOptions.toTypedArray(),
+                        "-I${cinteropDirectory.absolutePath}",
+                    )
+                }
+                create("sha256Intrinsics") {
+                    definitionFile.set(cinteropDirectory.resolve("sha256_intrinsics.def"))
+                    compilerOpts(
+                        *nativeCCompilerOptions.toTypedArray(),
+                        "-I${cinteropDirectory.absolutePath}",
+                    )
+                }
+                create("konaSystem") {
+                    definitionFile.set(cinteropDirectory.resolve("kona_system.def"))
+                    compilerOpts(
+                        *nativeCCompilerOptions.toTypedArray(),
+                        "-I${cinteropDirectory.absolutePath}",
+                    )
+                }
+            }
+        }
+    }
+
+    linuxX64 { configureCinterops() }
+    linuxArm64 { configureCinterops() }
+    if (enableMacos) {
+        macosArm64 { configureCinterops() }
+    }
+    mingwX64 { configureCinterops() }
+
     sourceSets {
         commonMain.dependencies {
             implementation(libs.okio)
         }
-        linuxX64Main.dependencies {
+        nativeMain.dependencies {
             implementation(libs.lz4Native)
-        }
-        linuxX64 {
-            compilations.getByName("main") {
-                cinterops {
-                    create("lz4") {
-                        definitionFile.set(file("src/linuxX64Main/cinterop/lz4.def"))
-                        compilerOpts(
-                            *nativeCCompilerOptions.toTypedArray(),
-                            "-I${file("src/linuxX64Main/cinterop").absolutePath}",
-                        )
-                    }
-                    create("blake3") {
-                        definitionFile.set(file("src/linuxX64Main/cinterop/blake3.def"))
-                        compilerOpts(
-                            *nativeCCompilerOptions.toTypedArray(),
-                            "-I${file("src/linuxX64Main/cinterop").absolutePath}",
-                        )
-                    }
-                    create("sha256Intrinsics") {
-                        definitionFile.set(file("src/linuxX64Main/cinterop/sha256_intrinsics.def"))
-                        compilerOpts(
-                            *nativeCCompilerOptions.toTypedArray(),
-                            "-I${file("src/linuxX64Main/cinterop").absolutePath}",
-                        )
-                    }
-                    create("konaSystem") {
-                        definitionFile.set(file("src/linuxX64Main/cinterop/kona_system.def"))
-                        compilerOpts(
-                            *nativeCCompilerOptions.toTypedArray(),
-                            "-I${file("src/linuxX64Main/cinterop").absolutePath}",
-                        )
-                    }
-                }
-            }
         }
         jvmMain.dependencies {
             implementation(libs.lz4Java)
         }
-        commonTest.dependencies {
-            implementation(libs.kotestFrameworkEngine)
-            implementation(libs.kotestAssertions)
-        }
-        jvmTest.dependencies {
-            implementation(libs.kotestFrameworkEngine)
-            implementation(libs.kotestRunner)
-            implementation(libs.kotestAssertions)
-        }
-        linuxX64Test.dependencies {
-            implementation(libs.kotestFrameworkEngine)
-            implementation(libs.kotestAssertions)
-        }
     }
-}
-
-tasks.named("cinteropBlake3LinuxX64") {
-    dependsOn(buildBlake3)
-}
-
-tasks.named("cinteropSha256IntrinsicsLinuxX64") {
-    dependsOn(buildSha256Intrinsics)
-}
-
-tasks.named<Test>("jvmTest") {
-    dependsOn(":blake3Jni:buildBlake3Jni")
-    useJUnitPlatform()
 }
 
 tasks.named<ProcessResources>("jvmProcessResources") {
     dependsOn(":blake3Jni:buildBlake3Jni")
-    from(rootProject.file("blake3Jni/build/native/libblake3_jni.so")) {
+    from(rootProject.file("blake3Jni/build/native/linuxX64/libblake3_jni.so")) {
         into("jp/juggler/konaArchive/native/linux-x86_64")
     }
 }

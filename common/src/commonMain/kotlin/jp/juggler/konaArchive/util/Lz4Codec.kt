@@ -2,7 +2,7 @@ package jp.juggler.konaArchive.util
 
 import okio.Buffer
 
-internal expect val defaultLz4Codec: Lz4Codec
+expect val defaultLz4Codec: Lz4Codec
 
 @Suppress("MagicNumber")
 data class Lz4Options(

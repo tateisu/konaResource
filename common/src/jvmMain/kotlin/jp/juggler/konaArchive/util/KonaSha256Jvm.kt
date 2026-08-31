@@ -16,5 +16,3 @@ class KonaSha256Jvm : KonaDigest() {
         return digest.digest()
     }
 }
-
-actual val defaultKonaSha256: KonaDigest = KonaSha256Jvm()

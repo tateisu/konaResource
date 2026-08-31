@@ -1,4 +1,0 @@
-headers = sha256_intrinsics.h
-package = jp.juggler.konaResource.sha256intrinsics
-staticLibraries = libsha256intrinsics.a
-libraryPaths = build/sha256Intrinsics

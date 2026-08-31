@@ -1,5 +1,47 @@
 # TODO
-ひとつずつ順に実行して、終わったら `[x]` をつけて。
+ひとつずつ順に実行して、終わったら `[x]` をつける
+
+# testモジュールのCLI
+
+- kotlinx-cliを導入
+- main の Main.kt でkotlinx-cli を使って引数パース。ただし現時点では何もしない
+- A:そのMain.kt を実行するネイティブバイナリをクロスプラットフォームビルド
+  - ただしGradleプロパティに -Pmacos=true を指定した場合以外は macos用の処理をスキップする
+  - ネイティブバイナリは blake3Jni のDLLを含まない/依存しないこと
+- B:そのMain.kt を実行するFatJarをビルド
+  - FatJarは blake3Jni のDLLを全て含むこと
+- deploy タスクでAとBをルートプロジェクトにコピーする。
+  - ファイル名は konaCommonTest や konaCommonTest.jar
+
+
+
+
+# blakeJni DLLのクロスプラットフォームビルド
+以下の環境用のDLLを全部生成する
+Linux x64 glibc
+Linux x64 musl # skip due to https://youtrack.jetbrains.com/issue/KT-38891
+Linux arm64 glibc
+macOS universal2
+Windows x64
+Windows arm64
+
+# benchmarkの単体バイナリ出力
+プラットホーム別に異なるバイナリを出力して、ビルドホスト以外の環境で動くようにしたい
+- jvm => fatJar( multiplatform JNI)
+- linux X64 glibc   => kexe?
+- linux Arm64 glibc => kexe?
+- windows X64   => exe?
+- windows Arm64 => exe?
+ 
+
+# ビルドホスト4種類のサポート
+Kotlin/Native コンパイラが対応する4種類のホストでビルドするワークフローを書く
+
+## ビルドホスト種別
+Linux x86_64
+Windows x86_64
+macOS ARM64	○
+macOS x86_64
 
 # Blake3 JNI の複数環境サポート
 

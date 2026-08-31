@@ -3,8 +3,6 @@ package jp.juggler.konaArchive.util
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
-actual val defaultKonaBlake3n256: KonaDigest = KonaBlake3n256Jni()
-
 /** BLAKE3-256 implementation backed by the native BLAKE3 JNI library. */
 class KonaBlake3n256Jni : KonaDigest() {
     override fun digest(

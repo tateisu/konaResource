@@ -31,6 +31,8 @@ rootProject.name = "konaResource"
 include(
     ":blake3Jni",
     ":common",
+    ":test",
+    ":test-ksp",
     ":plugin",
     ":sample1",
     ":sample2",

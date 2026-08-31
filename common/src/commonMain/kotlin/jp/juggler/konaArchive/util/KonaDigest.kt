@@ -58,4 +58,4 @@ abstract class KonaDigest {
 expect val defaultKonaSha256: KonaDigest
 expect val defaultKonaBlake3n256: KonaDigest
 
-internal fun ByteArray.hex(): String = toByteString().hex()
+fun ByteArray.hex(): String = toByteString().hex()

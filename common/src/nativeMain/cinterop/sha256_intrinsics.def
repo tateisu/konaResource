@@ -1,0 +1,2 @@
+headers = sha256_intrinsics.h SHA-Intrinsics/sha256.c sha256_intrinsics.c
+package = jp.juggler.konaResource.sha256intrinsics

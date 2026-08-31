@@ -1,4 +1,0 @@
-headers = blake3_kona.h
-package = jp.juggler.konaResource.blake3
-staticLibraries = libblake3.a
-libraryPaths = build/blake3

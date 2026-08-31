@@ -12,3 +12,26 @@
 - セクションごとのソフトウェア一覧はアルファベット順(case insensitive)に並べる。
 - ソフトウェアごとの箇条書きへ勝手に見出しを追加しない。
 
+# ビルドホスト
+- Kotlin/Nativeが動作する以下の環境でビルドが行えるようにしたい
+- ただしGradleプロパティに -Pmacos=true を指定した場合以外は macos用の処理をスキップする
+
+```
+Linux x86_64
+macOS ARM64
+macOS x86_64
+Windows x86_64
+```
+
+# ビルドターゲット
+- ただしGradleプロパティに -Pmacos=true を指定した場合以外は macos用の処理をスキップする
+
+```
+jvm => fatJar( multiplatform JNI)
+linux X64 glibc   => kexe?
+linux Arm64 glibc => kexe?
+windows X64   => exe?
+windows Arm64 => exe?
+macOS ARM64
+macOS x86_64
+```

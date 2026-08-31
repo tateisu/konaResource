@@ -10,12 +10,9 @@ import okio.Buffer
 import java.io.InputStream
 import java.io.OutputStream
 
-private const val IO_CHUNK_SIZE = 64 * SIZE_KIB
+internal object Lz4CodecJvm : Lz4Codec {
+    private const val IO_CHUNK_SIZE = 64 * SIZE_KIB
 
-/** JVM-only implementation for the Gradle plugin and CLI build tools. */
-internal actual val defaultLz4Codec: Lz4Codec = Lz4CodecJvm
-
-private object Lz4CodecJvm : Lz4Codec {
     @Suppress("LongMethod", "CyclomaticComplexMethod")
     override fun compress(
         inputSize: Int,
