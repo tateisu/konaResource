@@ -16,7 +16,7 @@ jobs:
       - name: Check out
         uses: actions/checkout@v4
       - name: Install dependencies
-        run: apk add --no-cache openjdk21 bash
+        run: apk add --no-cache openjdk21 bash gcc g++ make nasm linux-headers
       - name: Set JAVA_HOME
         run: export JAVA_HOME=/usr/lib/jvm/java-21-openjdk/x64
       - name: common:jvmTest
