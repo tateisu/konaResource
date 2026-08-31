@@ -17,6 +17,13 @@ kotlin {
             }
         }
     }
+    linuxArm64 {
+        binaries {
+            executable {
+                entryPoint = "jp.juggler.konaResource.sample.main"
+            }
+        }
+    }
     sourceSets {
         linuxX64Main.dependencies {
             implementation(project(":common"))
