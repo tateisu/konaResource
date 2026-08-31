@@ -21,6 +21,10 @@ jobs:
       - name: BUILD blake3Jni
         run: ./gradlew --no-daemon :blake3Jni:buildBlake3Jni
       - name: common:jvmTest
+        env:
+          SKIP_NATIVE_TARGETS: "true"
         run: ./gradlew --no-daemon :common:jvmTest
       - name: BENCHMARK (jvm)
+        env:
+          SKIP_NATIVE_TARGETS: "true"
         run: ./gradlew --no-daemon :benchmark:jvmBenchmark

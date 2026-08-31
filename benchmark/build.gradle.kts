@@ -22,10 +22,14 @@ tasks.configureEach {
 group = "jp.juggler.konaResource"
 version = rootProject.version
 
+val skipNativeTargets = providers.environmentVariable("SKIP_NATIVE_TARGETS").forUseAtConfigurationTime().orElse("false").get().toBoolean()
+
 kotlin {
     jvm()
-    linuxX64()
-    linuxArm64()
+    if (!skipNativeTargets) {
+        linuxX64()
+        linuxArm64()
+    }
 
     sourceSets {
         commonMain.dependencies {
