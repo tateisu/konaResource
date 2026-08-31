@@ -36,13 +36,12 @@ jobs:
       - name: Check out
         uses: actions/checkout@v4
       - name: Install dependencies
-        run: |
-          apk add --no-cache openjdk21 gradle bash
+        run: apk add --no-cache openjdk21 bash
       - name: Set JAVA_HOME
-        run: echo "JAVA_HOME=$(dirname $(dirname $(readlink -f $(which javac))))" >> $GITHUB_ENV
+        run: export JAVA_HOME=/usr/lib/jvm/java-21-openjdk/x64
       - name: common:jvmTest
-        run: /usr/bin/gradle --no-daemon :common:jvmTest
+        run: ./gradlew --no-daemon :common:jvmTest
       - name: BUILD sample2:build
-        run: /usr/bin/gradle --no-daemon :sample2:build
+        run: ./gradlew --no-daemon :sample2:build
       - name: BENCHMARK
-        run: /usr/bin/gradle --no-daemon :benchmark:jvmBenchmark
+        run: ./gradlew --no-daemon :benchmark:jvmBenchmark
