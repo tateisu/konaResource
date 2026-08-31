@@ -7,6 +7,18 @@ import java.nio.file.Files
 internal actual val konaArchiveTestUtils: KonaArchiveTestUtils = KonaArchiveTestUtilsJvm
 
 private object KonaArchiveTestUtilsJvm : KonaArchiveTestUtils {
+    override fun sourceFiles(root: String): List<TestSourceFile> =
+        sourceRoot(root).walkTopDown()
+            .filter { it.isFile }
+            .map { TestSourceFile(it.path, it.readBytes()) }
+            .sortedBy { it.path }
+            .toList()
+
+    private fun sourceRoot(root: String): File =
+        listOf(File(root), File("..", root))
+            .firstOrNull { it.isDirectory }
+            ?: error("Unable to find source directory: $root")
+
     override fun tempDirectory(name: String): String =
         Files.createTempDirectory("kona-resource-$name-").toFile().path
 

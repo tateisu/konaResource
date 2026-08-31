@@ -2,9 +2,9 @@ package jp.juggler.konaArchive
 
 import jp.juggler.konaArchive.util.KonaRandomAccess
 import jp.juggler.konaArchive.util.Lz4Options
+import jp.juggler.konaArchive.util.defaultKonaBlake3n256
 import jp.juggler.konaArchive.util.defaultLz4Codec
 import jp.juggler.konaArchive.util.hex
-import jp.juggler.konaArchive.util.rangeSha256
 
 private fun mergePath(
     parentPath: String,
@@ -42,31 +42,48 @@ fun KonaRandomAccess.encodeKonaArchive(
     previous: KonaArchive? = null,
 ) {
     val tmpArray = ByteArray(4096)
-    seek(0L)
-    writeInt32(KONA_ARCHIVE_MAGIC)
-    // -------------------------
-    // write compressed contents
-    val previousDigests = previous?.let { p ->
-        buildMap {
-            p.contentMetas { entry ->
-                put(entry.uncompressedSha256.hex(), entry)
+    // VERSION 2+ uses BLAKE-3-256
+    val version = KONA_ARCHIVE_VERSION
+    val digester = defaultKonaBlake3n256
+    val accessAndDigester = KonaArchive.AccessAndDigester(
+        access = this,
+        version = version,
+        digester = digester,
+    )
+    val previousDigests = previous
+        ?.takeIf { it.accessAndDigester.version == version }
+        ?.let { prev ->
+            buildMap {
+                prev.contentMetas { put(it.metaKey(), it) }
             }
         }
-    }
+    // -------------------------
+    // write magic at start of access
+    seek(0L)
+    writeInt32(KONA_ARCHIVE_MAGIC)
+
+    // -------------------------
+    // write compressed contents
     val compressedDataStart = pos
     val contentMetas = mutableListOf<KonaArchiveFile>()
     val digestToMetaIndex = HashMap<String, Int>()
     val pathToMetaIndex = HashMap<String, Int>()
     root.scan("") { path, entry ->
         if (entry !is KonaWriterFile) return@scan
-        var uncompressedSize = 0L
-        val uncompressedSha256 = entry.open().use {
-            uncompressedSize = it.size
-            it.rangeSha256()
+        var uncompressedSize = 0
+        val uncompressedDigest = entry.open().use { fileAccess ->
+            uncompressedSize = fileAccess.size
+                .takeIf { it <= Int.MAX_VALUE }
+                ?.toInt() ?: error("too large file. $path")
+            digester.rangeDigest(fileAccess)
         }
-        val digestHex = uncompressedSha256.hex()
+        val metaKey = KonaArchiveFile.metaKey(
+            version = version,
+            size = uncompressedSize,
+            digest = uncompressedDigest,
+        )
         // 同一ファイル中で既出？
-        val existing = digestToMetaIndex[digestHex]
+        val existing = digestToMetaIndex[metaKey]
         if (existing != null) {
             pathToMetaIndex[path] = existing
             return@scan
@@ -74,10 +91,10 @@ fun KonaRandomAccess.encodeKonaArchive(
         val compressedStart = pos
         val metaIndex = contentMetas.size
         // 前回のアーカイブに同一コンテンツがある？
-        val old = previousDigests?.get(uncompressedSha256.hex())
-        if (old != null) {
+        val prevContent = previousDigests?.get(uncompressedDigest.hex())
+        if (prevContent != null) {
             // old のcompressedDataをストリームに書く
-            old.openCompressed().use { src ->
+            prevContent.openCompressed().use { src ->
                 while (true) {
                     val nRead = src.readByteArray(tmpArray, 0, tmpArray.size)
                     if (nRead <= 0) break
@@ -85,16 +102,16 @@ fun KonaRandomAccess.encodeKonaArchive(
                 }
             }
             pathToMetaIndex[path] = metaIndex
-            digestToMetaIndex[digestHex] = metaIndex
+            digestToMetaIndex[metaKey] = metaIndex
             contentMetas.add(
                 KonaArchiveFile(
+                    accessAndDigester = accessAndDigester,
                     name = "", // not used
-                    access = this,
                     compressedStart = compressedStart.toInt(),
-                    compressedSize = old.compressedSize,
-                    uncompressedSize = uncompressedSize.toInt(),
-                    compressedSha256 = old.compressedSha256,
-                    uncompressedSha256 = uncompressedSha256,
+                    compressedSize = prevContent.compressedSize,
+                    uncompressedSize = uncompressedSize,
+                    compressedDigest = prevContent.compressedDigest,
+                    uncompressedDigest = uncompressedDigest,
                 ),
             )
             return@scan
@@ -102,7 +119,7 @@ fun KonaRandomAccess.encodeKonaArchive(
         // 圧縮して書き出す
         entry.open().use { src ->
             defaultLz4Codec.compress(
-                inputSize = uncompressedSize.toInt(),
+                inputSize = uncompressedSize,
                 options = options,
                 // codecが入力バイト列を要求したら呼ばれる。
                 // 戻り値は追加したバイト数。-1 は入力の終端を表す。
@@ -118,19 +135,21 @@ fun KonaRandomAccess.encodeKonaArchive(
         }
         val end = pos
         val compressedSize = (end - compressedStart)
-        val compressedSha256 = rangeSha256(start = compressedStart, end = pos)
+            .takeIf { it <= Int.MAX_VALUE }
+            ?.toInt() ?: error("too large compressed file. $path")
+        val compressedDigest = digester.rangeDigest(this, start = compressedStart, end = end)
         seek(end)
         pathToMetaIndex[path] = metaIndex
-        digestToMetaIndex[digestHex] = metaIndex
+        digestToMetaIndex[metaKey] = metaIndex
         contentMetas.add(
             KonaArchiveFile(
+                accessAndDigester = accessAndDigester,
                 name = "", // not used
-                access = this,
                 compressedStart = compressedStart.toInt(),
-                compressedSize = compressedSize.toInt(),
-                uncompressedSize = uncompressedSize.toInt(),
-                compressedSha256 = compressedSha256,
-                uncompressedSha256 = uncompressedSha256,
+                compressedSize = compressedSize,
+                uncompressedSize = uncompressedSize,
+                compressedDigest = compressedDigest,
+                uncompressedDigest = uncompressedDigest,
             ),
         )
     }
@@ -141,9 +160,9 @@ fun KonaRandomAccess.encodeKonaArchive(
     val metaStarts = contentMetas.map {
         val metaStart = pos
         writeInt32(it.compressedStart)
-        writeByteArray(it.compressedSha256)
+        writeByteArray(it.compressedDigest)
         writeInt32(it.compressedSize)
-        writeByteArray(it.uncompressedSha256)
+        writeByteArray(it.uncompressedDigest)
         writeInt32(it.uncompressedSize)
         metaStart
     }
@@ -197,27 +216,28 @@ fun KonaRandomAccess.encodeKonaArchive(
     // write header
     val headerStart = pos
 
-    val contentMetaSha256 = rangeSha256(contentMetaStart, namesStart)
-    val namesSha256 = rangeSha256(namesStart, dirItemsStart)
-    val dirItemsSha256 = rangeSha256(dirItemsStart, headerStart)
+    val contentMetaDigest = digester.rangeDigest(this, contentMetaStart, namesStart)
+    val namesDigest = digester.rangeDigest(this, namesStart, dirItemsStart)
+    val dirItemsDigest = digester.rangeDigest(this, dirItemsStart, headerStart)
     seek(headerStart)
     writeInt32(compressedDataStart.toInt())
     writeInt32(contentMetaStart.toInt())
-    writeByteArray(contentMetaSha256)
+    writeByteArray(contentMetaDigest)
     writeInt32(namesStart.toInt())
-    writeByteArray(namesSha256)
+    writeByteArray(namesDigest)
     writeInt32(dirItemsStart.toInt())
     writeInt32(dirItemsCount)
-    writeByteArray(dirItemsSha256)
+    writeByteArray(dirItemsDigest)
     val rootDirInfo = pathToDirInfo[""]!!
     writeInt32(rootDirInfo.first)
     writeInt32(rootDirInfo.second)
     val headerEnd = pos
 
-    val headerSha256 = rangeSha256(headerStart, headerEnd)
+    val headerDigest = digester.rangeDigest(this, headerStart, headerEnd)
     seek(headerEnd)
-    writeByteArray(headerSha256)
+    writeByteArray(headerDigest)
     writeInt32(KONA_ARCHIVE_VERSION)
+    if (pos > Int.MAX_VALUE) error("too large archive. $pos")
     truncate()
     close()
 }

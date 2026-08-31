@@ -1,6 +1,7 @@
 package jp.juggler.konaArchive
 
 internal interface KonaArchiveTestUtils {
+    fun sourceFiles(root: String): List<TestSourceFile>
     fun tempDirectory(name: String): String
     fun tempArchive(name: String): String
     fun resolve(parent: String, child: String): String
@@ -15,5 +16,10 @@ internal interface KonaArchiveTestUtils {
 
     fun decodeArchive(path: String): KonaArchive
 }
+
+internal data class TestSourceFile(
+    val path: String,
+    val bytes: ByteArray,
+)
 
 internal expect val konaArchiveTestUtils: KonaArchiveTestUtils

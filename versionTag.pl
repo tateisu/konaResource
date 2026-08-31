@@ -58,6 +58,7 @@ if( @versions !=1 ){
 # ビルドを通ることを確認
 cmd qq(
     ./gradlew
+    build
     check
     sample1:runDebugExecutableLinuxX64
     sample1:runReleaseExecutableLinuxX64

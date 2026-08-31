@@ -1,9 +1,8 @@
-package jp.juggler.konaArchive
+package jp.juggler.konaArchive.util
 
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
-import jp.juggler.konaArchive.util.EmbedRandomAccess
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.pin

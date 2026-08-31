@@ -1,34 +1,54 @@
 package jp.juggler.konaArchive
 
+import jp.juggler.konaArchive.util.KonaDigest
 import jp.juggler.konaArchive.util.KonaRandomAccess
-import jp.juggler.konaArchive.util.defaultKonaSha256
 import jp.juggler.konaArchive.util.defaultLz4Codec
-import jp.juggler.konaArchive.util.rangeSha256
+import jp.juggler.konaArchive.util.hex
 import okio.Buffer
 
+/**
+ * MAGICは KonaArchive ファイル先頭にlittle endianで書かれる
+ */
 internal const val KONA_ARCHIVE_MAGIC: Int = 0x0123CDEF
-internal const val KONA_ARCHIVE_VERSION: Int = 1
+
+/**
+ * エンコーダが出力する KonaArchive ファイルのスキーマバージョン。
+ * - version 1: ダイジェストは SHA256
+ * - version 2: ダイジェストは BLAKE-3-256
+ */
+internal const val KONA_ARCHIVE_VERSION: Int = 2
 internal const val KONA_ARCHIVE_CONTENT_META_SIZE: Int = 3 * 4 + 2 * 32
 internal const val KONA_ARCHIVE_DIR_ITEM_SIZE: Int = 12
 internal const val DIR_FLAG = 0x80000000.toInt()
 internal const val DIR_MASK = DIR_FLAG.inv()
 
 class KonaArchive(
-    private val access: KonaRandomAccess,
+    val accessAndDigester: AccessAndDigester,
     @Suppress("unused")
     val root: KonaArchiveDir,
     // SHA256で識別されるコンテンツを列挙するラムダ
     val contentMetas: (callback: (KonaArchiveFile) -> Unit) -> Unit,
 ) : AutoCloseable {
     override fun close() {
-        access.close()
+        accessAndDigester.access.close()
     }
+
+    class AccessAndDigester(
+        val access: KonaRandomAccess,
+        val version: Int,
+        val digester: KonaDigest,
+    )
+
+    fun pathToFile(path: String): KonaArchiveFile? = root.pathToFile(path)
+    fun pathToDir(path: String): KonaArchiveDir? = root.pathToDir(path)
+    fun pathToEntry(path: String): KonaArchiveEntry? = root.pathToEntry(path)
 }
 
 /**
  * KonaArchiveのディレクトリ中の要素の抽象インタフェース
  */
 sealed class KonaArchiveEntry {
+    abstract val accessAndDigester: KonaArchive.AccessAndDigester
     abstract val name: String
     abstract val size: Int
 }
@@ -37,18 +57,32 @@ sealed class KonaArchiveEntry {
  * KonaArchiveのディレクトリ中のファイル
  */
 class KonaArchiveFile(
+    override val accessAndDigester: KonaArchive.AccessAndDigester,
     override val name: String,
-    private val access: KonaRandomAccess,
     val compressedStart: Int,
     val compressedSize: Int,
     val uncompressedSize: Int,
     // verifySha256() で圧縮前後のデータを検証する
-    val compressedSha256: ByteArray,
-    val uncompressedSha256: ByteArray,
+    val compressedDigest: ByteArray,
+    val uncompressedDigest: ByteArray,
 ) : KonaArchiveEntry() {
+    companion object {
+        internal fun metaKey(
+            version: Int,
+            size: Int,
+            digest: ByteArray,
+        ) = "$version:$size:${digest.hex()}"
+    }
+
     override val size = uncompressedSize
     fun isEmpty() = size <= 0
     fun isNotEmpty() = size > 0
+
+    fun metaKey() = metaKey(
+        version = accessAndDigester.version,
+        size = uncompressedSize,
+        digest = uncompressedDigest,
+    )
 
     /**
      * コンテンツをデコードする。内容は順次 callbackに渡される。
@@ -56,7 +90,7 @@ class KonaArchiveFile(
      */
     fun content(
         callback: (Buffer) -> Unit = {},
-    ): Buffer = access.subRange(
+    ): Buffer = accessAndDigester.access.subRange(
         compressedStart.toLong(),
         (compressedStart + compressedSize).toLong(),
     ).use { compressedRange ->
@@ -85,18 +119,20 @@ class KonaArchiveFile(
      * 圧縮データと展開データのSHA256を検証する。
      * content() と異なり、検証のために圧縮データの読み込みと展開を行う。
      */
-    fun verifySha256() {
-        val compressedDigest = openCompressed().use { it.rangeSha256() }
-        require(compressedDigest.contentEquals(compressedSha256)) {
+    fun verifyDigest() {
+        val compressedDigest = openCompressed().use {
+            accessAndDigester.digester.rangeDigest(it)
+        }
+        require(compressedDigest.contentEquals(this@KonaArchiveFile.compressedDigest)) {
             "compressed content digest mismatch: $name"
         }
-        val uncompressedDigest = with(defaultKonaSha256()) {
+        val uncompressedDigest = accessAndDigester.digester.digest { updateDigest ->
             content { buffer ->
-                update(buffer.readByteArray())
+                val bytes = buffer.readByteArray()
+                updateDigest(bytes, 0, bytes.size)
             }
-            finish()
         }
-        require(uncompressedDigest.contentEquals(uncompressedSha256)) {
+        require(uncompressedDigest.contentEquals(this@KonaArchiveFile.uncompressedDigest)) {
             "uncompressed content digest mismatch: $name"
         }
     }
@@ -105,7 +141,7 @@ class KonaArchiveFile(
      * 圧縮されたデータのバイト列を含むKonaRandomAccessを返す
      * 使い終わったらcloseすること
      */
-    fun openCompressed(): KonaRandomAccess = access.subRange(
+    fun openCompressed(): KonaRandomAccess = accessAndDigester.access.subRange(
         start = compressedStart.toLong(),
         end = (compressedStart + compressedSize).toLong(),
     )
@@ -138,6 +174,7 @@ class KonaArchiveFile(
  */
 @Suppress("TooManyFunctions")
 class KonaArchiveDir(
+    override val accessAndDigester: KonaArchive.AccessAndDigester,
     override val name: String,
     private val access: KonaRandomAccess,
     private val dirItemsStart: Long,
@@ -187,6 +224,7 @@ class KonaArchiveDir(
         val name = readNameString(i0)
         when {
             i1.and(DIR_FLAG) != 0 -> KonaArchiveDir(
+                accessAndDigester = accessAndDigester,
                 name = name,
                 access = access.subRange(),
                 dirItemsStart = dirItemsStart,
@@ -197,7 +235,11 @@ class KonaArchiveDir(
 
             else -> {
                 val entryOffset = i1.and(DIR_MASK)
-                readContentMeta(name, entryOffset)
+                readContentMeta(
+                    accessAndDigester = accessAndDigester,
+                    name = name,
+                    entryOffset = entryOffset,
+                )
             }
         }
     }
@@ -321,7 +363,7 @@ class KonaArchiveDir(
      * 引数の path 文字列を pathSegmentsに分解してアーカイブエントリを取得する。
      * 先頭の `/` の連続は無視する。
      */
-    fun getPath(
+    fun pathToEntry(
         path: String,
     ): KonaArchiveEntry? = get(
         buildList {
@@ -337,8 +379,8 @@ class KonaArchiveDir(
     )
 
     // ショートハンド
-    fun pathToFile(path: String) = getPath(path) as? KonaArchiveFile
-    fun pathToDir(path: String) = getPath(path) as? KonaArchiveDir
+    fun pathToFile(path: String) = pathToEntry(path) as? KonaArchiveFile
+    fun pathToDir(path: String) = pathToEntry(path) as? KonaArchiveDir
     fun file(i: Int) = get(i) as? KonaArchiveFile
     fun dir(i: Int) = get(i) as? KonaArchiveDir
     fun file(name: String) = get(name) as? KonaArchiveFile

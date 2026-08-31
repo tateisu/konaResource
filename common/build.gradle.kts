@@ -24,6 +24,58 @@ val jvmJavadocJar = tasks.register<Jar>("jvmJavadocJar") {
     from(rootProject.file("README.md"))
 }
 
+val blake3SourceFiles = listOf(
+    "blake3.c",
+    "blake3_dispatch.c",
+    "blake3_portable.c",
+    "blake3_sse2_x86-64_unix.S",
+    "blake3_sse41_x86-64_unix.S",
+    "blake3_avx2_x86-64_unix.S",
+    "blake3_avx512_x86-64_unix.S",
+).map { file("src/linuxX64Main/cinterop/$it") }
+
+val blake3BuildDirectory = layout.buildDirectory.dir("blake3")
+val blake3Archive = blake3BuildDirectory.map { it.file("libblake3.a") }
+val buildBlake3 = tasks.register("buildBlake3") {
+    inputs.files(
+        blake3SourceFiles +
+            file("src/linuxX64Main/cinterop/blake3.h") +
+            file("src/linuxX64Main/cinterop/blake3_impl.h"),
+    )
+    outputs.file(blake3Archive)
+    doLast {
+        fun run(vararg command: String) {
+            check(ProcessBuilder(*command).inheritIO().start().waitFor() == 0) {
+                "Command failed: ${command.joinToString(" ")}"
+            }
+        }
+
+        val outputDirectory = blake3BuildDirectory.get().asFile
+        outputDirectory.mkdirs()
+        val objects = blake3SourceFiles.map { source ->
+            outputDirectory.resolve("${source.name}.o")
+        }
+        blake3SourceFiles.zip(objects).forEach { (source, objectFile) ->
+            run(
+                "cc",
+                "-O3",
+                "-fPIC",
+                "-c",
+                source.absolutePath,
+                "-I${source.parentFile.absolutePath}",
+                "-o",
+                objectFile.absolutePath,
+            )
+        }
+        run(
+            "ar",
+                "rcs",
+                blake3Archive.get().asFile.absolutePath,
+                *objects.map { it.absolutePath }.toTypedArray(),
+        )
+    }
+}
+
 publishing {
     publications.withType<MavenPublication>().configureEach {
         when (name) {
@@ -58,10 +110,15 @@ kotlin {
                             "-I/usr/include/x86_64-linux-gnu",
                         )
                     }
+                    create("blake3") {
+                        definitionFile.set(file("src/linuxX64Main/cinterop/blake3.def"))
+                        compilerOpts("-I${file("src/linuxX64Main/cinterop").absolutePath}")
+                    }
                 }
             }
         }
         jvmMain.dependencies {
+            implementation(libs.commonsCodec)
             implementation(libs.lz4Java)
         }
         commonTest.dependencies {
@@ -78,6 +135,10 @@ kotlin {
             implementation(libs.kotestAssertions)
         }
     }
+}
+
+tasks.named("cinteropBlake3LinuxX64") {
+    dependsOn(buildBlake3)
 }
 
 tasks.named<Test>("jvmTest") {

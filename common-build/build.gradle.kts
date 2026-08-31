@@ -17,6 +17,7 @@ kotlin {
         jvmMain {
             kotlin.srcDir("../common/src/jvmMain/kotlin")
             dependencies {
+                implementation(libs.commonsCodec)
                 implementation(libs.lz4Java)
             }
         }

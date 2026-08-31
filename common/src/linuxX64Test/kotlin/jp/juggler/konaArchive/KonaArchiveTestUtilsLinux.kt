@@ -19,11 +19,63 @@ import platform.posix.readdir
 import platform.posix.rmdir
 import platform.posix.unlink
 
-internal actual val konaArchiveTestUtils: KonaArchiveTestUtils = KonaArchiveTestUtilsLinux
+internal actual val konaArchiveTestUtils: KonaArchiveTestUtils =
+    KonaArchiveTestUtilsLinux
 
-@Suppress("")
+@OptIn(ExperimentalForeignApi::class)
+@Suppress("TooManyFunctions")
 private object KonaArchiveTestUtilsLinux : KonaArchiveTestUtils {
     private var nextTemporaryDirectoryId = 0
+
+    override fun sourceFiles(root: String): List<TestSourceFile> =
+        sourceFilesRecursive(sourceRoot(root)).sortedBy { it.path }
+
+    private fun sourceRoot(root: String): String {
+        val directory = opendir(root)
+        if (directory != null) {
+            closedir(directory)
+            return root
+        }
+        val parentRoot = "../$root"
+        val parentDirectory = opendir(parentRoot)
+        if (parentDirectory != null) {
+            closedir(parentDirectory)
+            return parentRoot
+        }
+        error("Unable to find source directory: $root")
+    }
+
+    private fun sourceFilesRecursive(path: String): List<TestSourceFile> = when (fileType(path)) {
+        FileType.Directory -> {
+            val result = mutableListOf<TestSourceFile>()
+            val directory = opendir(path)
+                ?: throw ErrnoException("Unable to open directory: $path")
+            try {
+                while (true) {
+                    val entry = readdir(directory) ?: break
+                    val name = entry.pointed.d_name.toKString()
+                    if (name != "." && name != "..") {
+                        result += sourceFilesRecursive(joinPath(path, name))
+                    }
+                }
+            } finally {
+                closedir(directory)
+            }
+            result
+        }
+
+        FileType.Regular -> {
+            val access = FileRandomAccess(path, isReadOnly = true)
+            try {
+                require(access.size <= Int.MAX_VALUE) { "Test file is too large: $path" }
+                listOf(TestSourceFile(path, access.readBytes(access.size.toInt(), path)))
+            } finally {
+                access.close()
+            }
+        }
+
+        FileType.Other -> emptyList()
+    }
 
     fun joinPath(parent: String, child: String): String =
         if (parent.endsWith('/')) parent + child else "$parent/$child"

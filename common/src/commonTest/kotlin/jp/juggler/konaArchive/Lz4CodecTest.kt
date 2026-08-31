@@ -5,7 +5,7 @@ import io.kotest.matchers.shouldBe
 import jp.juggler.konaArchive.util.Lz4Options
 import jp.juggler.konaArchive.util.defaultLz4Codec
 
-class Lz4CodecStreamingTest : FreeSpec() {
+class Lz4CodecTest : FreeSpec() {
     init {
         "frameOptionsAreApplied" {
             val input = ByteArray(128 * 1024) { index -> (index * 31).toByte() }
@@ -130,6 +130,35 @@ class Lz4CodecStreamingTest : FreeSpec() {
 
             (outputCalls > 1) shouldBe true
             compressedOffset shouldBe compressedBytes.size
+            restored.readByteArray().toList() shouldBe input.toList()
+        }
+        "LZ4 compresses and decompresses data" {
+            val input = ByteArray(128 * 1024) { index -> (index * 31).toByte() }
+            val compressed = defaultLz4Codec.compress(
+                inputSize = input.size,
+                input = { buffer ->
+                    buffer.write(input)
+                    input.size
+                },
+            )
+
+            val compressedBytes = compressed.readByteArray()
+            var offset = 0
+            val restored = defaultLz4Codec.decompress(
+                expectedSize = input.size,
+                input = { buffer ->
+                    if (offset == compressedBytes.size) {
+                        -1
+                    } else {
+                        val size = compressedBytes.size - offset
+                        buffer.write(compressedBytes, offset, size)
+                        offset += size
+                        size
+                    }
+                },
+            )
+
+            offset shouldBe compressedBytes.size
             restored.readByteArray().toList() shouldBe input.toList()
         }
     }

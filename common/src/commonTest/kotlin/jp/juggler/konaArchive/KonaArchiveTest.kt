@@ -2,58 +2,24 @@ package jp.juggler.konaArchive
 
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.shouldBe
-import jp.juggler.konaArchive.util.sha256
+import jp.juggler.konaArchive.util.hex
 
 class KonaArchiveTest : FreeSpec() {
-    private fun archivePaths(archive: KonaArchive): List<String> {
-        val paths = mutableListOf<String>()
-        fun visit(directory: KonaArchiveDir, prefix: String) {
+    private fun archivePaths(archive: KonaArchive) = buildSet {
+        fun visit(directory: KonaArchiveDir, path: String) {
             for (entry in directory) {
-                val path = if (prefix.isEmpty()) entry.name else "$prefix/${entry.name}"
+                val childPath = when {
+                    path.isEmpty() -> entry.name
+                    else -> "$path/${entry.name}"
+                }
                 when (entry) {
-                    is KonaArchiveDir -> visit(entry, path)
-                    is KonaArchiveFile -> paths += path
+                    is KonaArchiveFile -> add(childPath)
+                    // フォルダ自体は列挙しないが子要素は探索する
+                    is KonaArchiveDir -> visit(entry, childPath)
                 }
             }
         }
         visit(archive.root, "")
-        return paths
-    }
-
-    private fun archiveContents(archive: KonaArchive): Map<String, ByteArray> {
-        val contents = mutableMapOf<String, ByteArray>()
-        fun visit(directory: KonaArchiveDir, prefix: String) {
-            for (entry in directory) {
-                val path = if (prefix.isEmpty()) entry.name else "$prefix/${entry.name}"
-                when (entry) {
-                    is KonaArchiveDir -> visit(entry, path)
-                    is KonaArchiveFile -> {
-                        contents[path] = entry.content().readByteArray()
-                    }
-                }
-            }
-        }
-        visit(archive.root, "")
-        return contents
-    }
-
-    private fun archiveSha256(
-        archive: KonaArchive,
-        @Suppress("SameParameterValue")
-        expectedPath: String,
-    ): ByteArray {
-        var result: ByteArray? = null
-        fun visit(directory: KonaArchiveDir, prefix: String) {
-            for (entry in directory) {
-                val path = if (prefix.isEmpty()) entry.name else "$prefix/${entry.name}"
-                when (entry) {
-                    is KonaArchiveDir -> visit(entry, path)
-                    is KonaArchiveFile -> if (path == expectedPath) result = entry.uncompressedSha256
-                }
-            }
-        }
-        visit(archive.root, "")
-        return result ?: error("Missing archive entry: $expectedPath")
     }
 
     init {
@@ -71,14 +37,28 @@ class KonaArchiveTest : FreeSpec() {
 
                 utils.encodeDirectory(root, archivePath)
                 utils.decodeArchive(archivePath).use { archive ->
-                    archivePaths(archive) shouldBe
-                        listOf("empty", "html/index.html", "html/z.html", "same/a.bin", "same/b.bin")
-                    (archive.root[listOf("html", "index.html")] as KonaArchiveFile).name shouldBe "index.html"
-                    (archive.root[listOf("", "same", "a.bin")] as KonaArchiveFile).name shouldBe "a.bin"
-                    (archive.root.getPath("/html/index.html") as KonaArchiveFile).name shouldBe "index.html"
-                    (archive.root.getPath("///same/a.bin") as KonaArchiveFile).name shouldBe "a.bin"
-                    archive.root.getPath("html//index.html") shouldBe null
+                    archivePaths(archive) shouldBe setOf(
+                        "empty",
+                        "html/index.html",
+                        "html/z.html",
+                        "same/a.bin",
+                        "same/b.bin",
+                    )
+                    // path segment access
+                    (archive.root[listOf("html", "index.html")] as? KonaArchiveFile)?.name shouldBe "index.html"
+                    (archive.root[listOf("", "same", "a.bin")] as? KonaArchiveFile)?.name shouldBe "a.bin"
                     archive.root[listOf("missing")] shouldBe null
+                    // pathTo** API
+                    archive.pathToFile("/html/index.html")?.name shouldBe "index.html"
+                    archive.pathToFile("///same/a.bin")?.name shouldBe "a.bin"
+                    archive.pathToFile("html//index.html") shouldBe null
+                    archive.pathToFile("html/index.html")?.bytes()?.hex() shouldBe
+                        "hello hello hello".encodeToByteArray().hex()
+                    archive.pathToFile("same/b.bin")?.bytes()?.hex() shouldBe
+                        byteArrayOf(1, 2, 3).hex()
+                    archive.pathToFile("empty")?.bytes()?.hex() shouldBe ""
+                    archive.pathToFile("html/index.html")?.verifyDigest()
+                    // implements List<*>
                     val first = archive.root[0]
                     archive.root.contains(first) shouldBe true
                     archive.root.containsAll(listOf(first, archive.root[1])) shouldBe true
@@ -87,11 +67,6 @@ class KonaArchiveTest : FreeSpec() {
                     archive.root.iterator().next().name shouldBe "empty"
                     archive.root.listIterator(1).previous().name shouldBe "empty"
                     archive.root.subList(0, 1).single().name shouldBe "empty"
-                    val contents = archiveContents(archive)
-                    contents["html/index.html"]!!.toList() shouldBe "hello hello hello".encodeToByteArray().toList()
-                    contents["same/b.bin"]!!.toList() shouldBe byteArrayOf(1, 2, 3).toList()
-                    contents["empty"]!!.toList() shouldBe emptyList()
-                    (archive.root.getPath("html/index.html") as KonaArchiveFile).verifySha256()
                 }
             } finally {
                 utils.deleteTree(root)
@@ -120,10 +95,11 @@ class KonaArchiveTest : FreeSpec() {
                 val firstContentArchive = utils.decodeArchive(firstArchivePath)
                 val second = utils.decodeArchive(secondArchivePath)
                 try {
-                    val firstContent = archiveContents(firstContentArchive)["a"]
-                    val secondContent = archiveContents(second)["b"]
-                    secondContent!!.toList() shouldBe firstContent!!.toList()
-                    secondContent.sha256().toList() shouldBe archiveSha256(second, "b").toList()
+                    second.pathToFile("b")?.bytes()?.hex() shouldBe firstContentArchive.pathToFile("a")?.bytes()?.hex()
+                    second.pathToFile("b")?.uncompressedDigest?.hex() shouldBe
+                        second.accessAndDigester.digester.digest(
+                            second.pathToFile("b")!!.bytes(),
+                        ).hex()
                 } finally {
                     firstContentArchive.close()
                     second.close()
