@@ -20,5 +20,9 @@ jobs:
           java-version: "21"
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
-      - name: Test BLAKE3 JNI
-        run: ./gradlew :common:jvmTest --tests "jp.juggler.konaArchive.KonaDigestBlake3JniTest" --no-daemon
+      - name: common:jvmTest
+        run: ./gradlew --no-daemon :common:jvmTest
+      - name: BUILD sample2:build
+        run: ./gradlew --no-daemon :sample2:build
+      - name: BENCHMARK
+        run: ./gradlew --no-daemon :benchmark:jvmBenchmark
