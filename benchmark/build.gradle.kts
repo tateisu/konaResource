@@ -25,7 +25,6 @@ version = rootProject.version
 kotlin {
     jvm()
     linuxX64()
-    linuxArm64()
 
     sourceSets {
         commonMain.dependencies {
