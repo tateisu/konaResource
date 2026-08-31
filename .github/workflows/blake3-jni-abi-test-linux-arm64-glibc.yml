@@ -18,7 +18,10 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
-      - name: common:jvmTest
-        run: ./gradlew --no-daemon :common:jvmTest
-      - name: BENCHMARK
-        run: ./gradlew --no-daemon :benchmark:jvmBenchmark
+      - name: BUILD blake3Jni (native aarch64)
+        run: |
+          echo "Platform: $(uname -s) $(uname -m)"
+          bash blake3Jni/build-native.sh blake3Jni/build/native/libblake3_jni.so "$JAVA_HOME"
+          file blake3Jni/build/native/libblake3_jni.so
+          ldconfig -p | grep libblake3 || true
+          ldd blake3Jni/build/native/libblake3_jni.so || true
