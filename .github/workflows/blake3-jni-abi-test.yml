@@ -1,0 +1,24 @@
+name: BLAKE3 JNI ABI Test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-x64-glibc:
+    name: Linux x64 glibc
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Test BLAKE3 JNI
+        run: ./gradlew :common:jvmTest --tests "jp.juggler.konaArchive.KonaDigestBlake3JniTest" --no-daemon

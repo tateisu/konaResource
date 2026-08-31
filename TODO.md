@@ -100,15 +100,15 @@ Gradle 自身も GitHub Actions での matrix build を公式に案内してい�
 
 結論として、**「Gradle が公式に動作確認している主要環境をほぼ全部」なら 7 ABI を用意**するのが分かりやすいです。現行 Gradle 9.7 は Windows / Linux / macOS の AMD64・AArch64 を中心に、Alpine Linux も公式対象にしています。([Gradle][1])
 
-| 優先度 | OS      | CPU    | ABI / libc | 成果物例           |
-| --- | ------- | ------ | ---------- | -------------- |
-| 必須  | Windows | x86_64 | MSVC       | `foo.dll`      |
-| 追加  | Windows | arm64  | MSVC       | `foo.dll`      |
-| 必須  | Linux   | x86_64 | glibc      | `libfoo.so`    |
-| 必須  | Linux   | arm64  | glibc      | `libfoo.so`    |
-| 追加  | Linux   | x86_64 | musl       | `libfoo.so`    |
-| 必須  | macOS   | x86_64 | Darwin     | `libfoo.dylib` |
-| 必須  | macOS   | arm64  | Darwin     | `libfoo.dylib` |
+| 優先度 | OS      | CPU    | ABI / libc | 成果物例       |
+|--------|---------|--------|------------|----------------|
+| 必須   | Windows | x86_64 | MSVC       | `foo.dll`      |
+| 追加   | Windows | arm64  | MSVC       | `foo.dll`      |
+| 必須   | Linux   | x86_64 | glibc      | `libfoo.so`    |
+| 必須   | Linux   | arm64  | glibc      | `libfoo.so`    |
+| 追加   | Linux   | x86_64 | musl       | `libfoo.so`    |
+| 必須   | macOS   | x86_64 | Darwin     | `libfoo.dylib` |
+| 必須   | macOS   | arm64  | Darwin     | `libfoo.dylib` |
 
 したがって、まず **5ターゲット**、
 
