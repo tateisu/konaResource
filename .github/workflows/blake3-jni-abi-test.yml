@@ -26,3 +26,23 @@ jobs:
         run: ./gradlew --no-daemon :sample2:build
       - name: BENCHMARK
         run: ./gradlew --no-daemon :benchmark:jvmBenchmark
+
+  linux-x64-musl:
+    name: Linux x64 musl
+    runs-on: ubuntu-latest
+    container:
+      image: alpine:3.22
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          apk add --no-cache openjdk21 gradle bash
+      - name: Set JAVA_HOME
+        run: echo "JAVA_HOME=$(dirname $(dirname $(readlink -f $(which javac))))" >> $GITHUB_ENV
+      - name: common:jvmTest
+        run: /usr/bin/gradle --no-daemon :common:jvmTest
+      - name: BUILD sample2:build
+        run: /usr/bin/gradle --no-daemon :sample2:build
+      - name: BENCHMARK
+        run: /usr/bin/gradle --no-daemon :benchmark:jvmBenchmark
