@@ -1,7 +1,7 @@
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-    // Use the plugin implementation from build-logic, not the published plugin.
-    id("jp.juggler.konaResource.local") version "0.1.5"
+    // Use the locally published plugin implementation
+    id("jp.juggler.konaResource.local") version "latest"
 }
 
 konaResource {
@@ -29,4 +29,28 @@ kotlin {
             implementation(project(":common"))
         }
     }
+}
+
+/**
+ * Gradleを実行しているホストのアーキテクチャを返す
+ * - sample2 の runDebugExecutable{...} タスクにマッチする名前
+ */
+val hostArch: String by lazy {
+    when {
+        System.getProperty("os.name").lowercase().contains("linux") ->
+            when (val arch = System.getProperty("os.arch").lowercase()) {
+                in setOf("amd64", "x86_64", "x64") -> "LinuxX64"
+                in setOf("aarch64", "arm64") -> "LinuxArm64"
+                else -> error("host is Linux, but os.arch is unexpected. [$arch]")
+            }
+
+        else -> error("unexpected arch. ")
+    }
+}
+
+
+tasks.register("runDebug") {
+    group = "run"
+    description = "Runs sample2 for the host architecture."
+    dependsOn("runDebugExecutable${hostArch}")
 }

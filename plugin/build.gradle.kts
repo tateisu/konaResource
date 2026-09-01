@@ -34,5 +34,11 @@ gradlePlugin {
             displayName = "Kona Resource"
             description = "Embeds resource archives in Linux/x64 Kotlin/Native executables"
         }
+        create("konaResourceLocal") {
+            id = "jp.juggler.konaResource.local"
+            implementationClass = "jp.juggler.konaResource.plugin.KonaResourcePlugin"
+            displayName = "Kona Resource (local)"
+            description = "Local sibling-project variant of the Kona Resource plugin"
+        }
     }
 }

@@ -1,8 +1,12 @@
-.gradle/
-.kotlin/
 **/build/
-*.iml
-.idea/
 *.hprof
-/konaArchive
+*.iml
 *.kona
+.gradle/
+.idea/
+.kotlin/
+jdk-downloads/
+jdk/*
+localMaven/
+
+!/jdk/.place-holder

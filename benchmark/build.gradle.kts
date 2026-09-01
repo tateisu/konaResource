@@ -1,18 +1,20 @@
+import jp.juggler.konaResource.buildlogic.konaTargets
 import org.gradle.api.tasks.JavaExec
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.kotlinxBenchmark)
+    id("jp.juggler.konaResource.buildlogic")
 }
 
 tasks.configureEach {
     if (name == "jvmBenchmark" || name == "jvmSmokeBenchmark") {
-        dependsOn(":blake3Jni:buildBlake3Jni")
+        dependsOn(":commonJni:buildBlake3Jni")
         doFirst {
             if (this is JavaExec) {
                 systemProperty(
                     "kona.blake3.jni.path",
-                    rootProject.file("blake3Jni/build/native/libblake3_jni.so").absolutePath,
+                    rootProject.file("commonJni/build/native/libblake3_jni.so").absolutePath,
                 )
             }
         }
@@ -27,8 +29,7 @@ val skipNativeTargets = System.getenv("SKIP_NATIVE_TARGETS")?.toBoolean() ?: fal
 kotlin {
     jvm()
     if (!skipNativeTargets) {
-        linuxX64()
-        linuxArm64()
+        konaTargets()
     }
 
     sourceSets {

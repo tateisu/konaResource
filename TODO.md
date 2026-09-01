@@ -1,21 +1,22 @@
 # TODO
 ひとつずつ順に実行して、終わったら `[x]` をつける
 
-# sample1がビルドされない
-  - sample1 は公開済みプラグイン(0.1.4)が config cache 非互換のため一時的に settings.gradle.kts から除外。version を 0.1.5 に更新済み。
-  - 残作業: ユーザが v0.1.5 タグを push → CI が Central 公開 → 公開後に settings.gradle.kts の sample1 を再有効化。
+# KonaBuildTarget 利用の拡大
+- [x] 可能な箇所全てで fun KotlinMultiplatformExtension.konaTargets() を使う
+  - needs `import jp.juggler.konaResource.buildlogic.konaTargets`
+  - use `kotlin { konaTargets() ...` instead of many Kotlin/Native targets.
 
 # testモジュールのCLI
+- [x] クロスプラットフォーム理由でtest cli を独立させた
+  - [x] jvmテスト用のFatJar
+  - [x] Kotlin/Native 各アーキの実行バイナリ
+  - [x] テスト絞り込みフィルタ
+  - [x] テスト実行のロギング
+  - [ ] ビルド高速化
+    - [ ] sample1 は公開済みプラグイン(0.1.4)が config cache 非互換のため一時的に settings.gradle.kts から除外。version を 0.1.5 に更新済み。
+    - [ ] ユーザが v0.1.5 タグを push → CI が Central 公開 → 公開後に settings.gradle.kts の sample1 を再有効化。
 
-- kotlinx-cliを導入
-- main の Main.kt でkotlinx-cli を使って引数パース。ただし現時点では何もしない
-- A:そのMain.kt を実行するネイティブバイナリをクロスプラットフォームビルド
-  - ただしGradleプロパティに -Pmacos=true を指定した場合以外は macos用の処理をスキップする
-  - ネイティブバイナリは blake3Jni のDLLを含まない/依存しないこと
-- B:そのMain.kt を実行するFatJarをビルド
-  - FatJarは blake3Jni のDLLを全て含むこと
-- deploy タスクでAとBをルートプロジェクトにコピーする。
-  - ファイル名は konaCommonTest や konaCommonTest.jar
+
 
 
 
@@ -30,27 +31,20 @@ Windows x64
 Windows arm64
 
 # benchmarkの単体バイナリ出力
-プラットホーム別に異なるバイナリを出力して、ビルドホスト以外の環境で動くようにしたい
-- jvm => fatJar( multiplatform JNI)
-- linux X64 glibc   => kexe?
-- linux Arm64 glibc => kexe?
-- windows X64   => exe?
-- windows Arm64 => exe?
- 
+- クロスプラットフォーム理由で単体バイナリを出力して、ビルドホスト以外の環境で動くようにしたい
+- test モジュールで既にやったことだが、こちらはデバッグビルドではなくリリースビルドを使う
+- ベンチマーク機構は再発明することになる
+  - 競合製品のソースコードを参考にすること 
+  - kotlinx-benchmarkはGradleに重依存しているので使えない。
+- deploy タスクで konaBenchmark なんたらをルートプロジェクトにコピーしてchmod する
+- それらのバイナリはGitHub workflow で使うのでリポジトリに追加する
+  - benchmark:deploy を実行したときだけ更新する
 
-# ビルドホスト4種類のサポート
-Kotlin/Native コンパイラが対応する4種類のホストでビルドするワークフローを書く
+## test, benchmark をクロスプラットフォーム実行するGithub Action
+  - アーキ別に書いてそれぞれ問題がないことを確認し、最後に単一ワークフローにまとめる
 
-## ビルドホスト種別
-Linux x86_64
-Windows x86_64
-macOS ARM64	○
-macOS x86_64
 
-# Blake3 JNI の複数環境サポート
-
-## Github Actions に環境別テストマトリクスを書く ✓
-
+## Github Actions に環境別テストマトリクスを書く 
 - 各ABI個別のworkflowファイルを作成（後で合成可能）
 - Linux x64 musl のスコア: `3861.073 ± 115.546 ops/s`
 - Kotlin/Native は glibc 前提のため musl では動作せず。JVMテスト/benchmarkのみ実行
@@ -286,4 +280,3 @@ aarch64 / arm64      → arm64
 [3]: https://docs.oracle.com/en/java/javase/25/docs/specs/jni/design.html?utm_source=chatgpt.com "Java Native Interface Specification: 2 - Design Overview"
 [4]: https://docs.gradle.org/current/javadoc/org/gradle/platform/Architecture.html?utm_source=chatgpt.com "Architecture (Gradle API 9.6.1)"
 [5]: https://docs.oracle.com/en/java/javase/25/migrate/migrating-jdk-8-later-jdk-releases.html?utm_source=chatgpt.com "Migrating from JDK 8 to Later JDK Releases"
-

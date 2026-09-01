@@ -104,6 +104,15 @@ into an executable.
 ./gradlew sample2:runReleaseExecutableLinuxX64
 ```
 
+## test
+reason to cross-platform, this app build separate binary to unit test.
+```
+./gradlew test:deploy
+java -jar konaCommonTest.jar test
+./konaCommonTest-linuxX64 test
+# (or some binalies for each build-available arch)
+```
+
 ## Run benchmarks
 ```shell
 
@@ -132,52 +141,49 @@ sudo apt install openjdk-21-jdk
 sudo apt install build-essential
 ```
 
-### Cross-compilation prerequisites (Ubuntu)
+### Cross-target build
+this project uses 2 kind of Native code.
+- Java JNI : used in `plugin` module, that need to build embed resource.
+- Kotlin/Native : used in `common` module and embed to user application.
 
-The `blake3Jni` module builds the JNI shared library with each target's C compiler.
-On a Linux host, install the cross compilers with apt before building the cross-platform
-DLLs (e.g. `:test:deploy` / `:test:konaCommonTestFatJar`).
+#### cross-compiler
+On a Linux host, install the cross-compilers with apt before 
+building the cross-platform JNI.
 
 ```shell
+# (Ubuntu)
+
+# (Optional) Ubuntu's ARM64 cross compiler conflicts with `gcc-multilib`. 
+# If `gcc-aarch64-linux-gnu` reports an unmet dependency and `gcc-multilib`
+# or `g++-multilib` is installed, remove the multilib meta packages first.
+sudo apt remove gcc-multilib g++-multilib
+
 # Linux ARM64: provides aarch64-linux-gnu-gcc
 sudo apt install gcc-aarch64-linux-gnu
 
 # Windows x64: provides x86_64-w64-mingw32-gcc
 sudo apt install gcc-mingw-w64-x86-64
-```
-
-If a required cross compiler is missing, the build fails with a message such as:
 
 ```
-Cross compiler 'aarch64-linux-gnu-gcc' for target not found. Install it or exclude the target.
 ```
+- build script automatically detects host environment can build it and build for available targets.
+- Note: **Windows ARM64** (`aarch64-w64-mingw32-gcc`) is not available as an official Ubuntu package.
+  It must be built manually if you want common.jar contains Windows Arm64 support.
+- Note: 
+- **macOS** (not yet supported) maybe use https://github.com/tpoechtrager/osxcross ? 
 
-Notes:
+#### JNI header and dll
+- go https://learn.microsoft.com/ja-jp/java/openjdk/download#openjdk-21
+- download JDK for some arch you want.
+- put JDK content into `${project}/jdk/${ArchName}/` .
+- build script search  `${project}/jdk/${ArchName}/include/jni.h`.
+- if not found, your host jdk Gradle runs on is used for same arch.  
+- build script enable JNI build target if jni.h found and compilers found.
 
-- **Windows ARM64** (`aarch64-w64-mingw32-gcc`) is not available as an official Ubuntu package.
-  It must be built manually if you need `buildBlake3JniWindowsArm64`.
-- **macOS** targets cannot be built on a Linux host with the bundled toolchain.
-  Build on a macOS host, or set up [osxcross](https://github.com/osxcross/osxcross)
-  and pass `-Pmacos=true` to the Gradle build.
+#### Kotlin/Native
 - The `common` module's native targets (linuxX64 / linuxArm64 / mingwX64) are cross-compiled
   by Kotlin/Native itself, so they do not require these external compilers.
-
-### Alpine Linux (musl)
-
-The `blake3-jni-abi-test-linux-x64-musl.yml` workflow runs in an Alpine container and
-installs its dependencies with `apk`:
-
-```shell
-apk add --no-cache openjdk21 bash gcc g++ make nasm linux-headers
-```
-
-This list is specific to the minimal Alpine image. On Ubuntu, only a JDK and `gcc`
-(covered by `build-essential` above) are required; `g++`, `make`, `nasm` and
-`linux-headers` are not used by this project's build, and `bash` is preinstalled.
-
-Note that Kotlin/Native does not support musl environments (see
-[KT-38891](https://youtrack.jetbrains.com/issue/KT-38891)), so musl is only usable for
-the JVM-side build and tests.
+- but **Alpine Linux (musl)** have issue for build/run. see [KT-38891](https://youtrack.jetbrains.com/issue/KT-38891).
 
 ## Using the CLI
 

@@ -26,7 +26,7 @@ common_sources=(
 )
 
 if [[ "$uname_s" != "Linux" ]]; then
-    echo "blake3Jni currently supports Linux only" >&2
+    echo "commonJni currently supports Linux only" >&2
     exit 1
 fi
 

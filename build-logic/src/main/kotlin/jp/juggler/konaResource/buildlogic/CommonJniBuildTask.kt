@@ -21,19 +21,19 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
 /**
- * blake3Jni の共有ライブラリをビルドするタスク。
- * [Blake3JniBuildUnit] が1つなら単一アーキテクチャ向けに直接リンクし、
+ * commonJni の共有ライブラリをビルドするタスク。
+ * [CommonJniBuildUnit] が1つなら単一アーキテクチャ向けに直接リンクし、
  * 複数なら各アーキテクチャの中間ライブラリを lipo で統合する(macOS universal2)。
  *
  * config cache 対応のため、スクリプト定義クラスやクロージャは捕捉しない。
  */
-data class Blake3JniBuildUnit(
+data class CommonJniBuildUnit(
     val arch: String,
     val sources: List<File>,
     val cflags: List<String>,
 ) : java.io.Serializable
 
-abstract class Blake3JniBuildTask : DefaultTask() {
+abstract class CommonJniBuildTask : DefaultTask() {
     @get:Input
     abstract val compiler: Property<String>
 
@@ -41,7 +41,7 @@ abstract class Blake3JniBuildTask : DefaultTask() {
     abstract val linkFlags: ListProperty<String>
 
     @get:Input
-    abstract val buildUnits: ListProperty<Blake3JniBuildUnit>
+    abstract val buildUnits: ListProperty<CommonJniBuildUnit>
 
     @get:InputFiles
     @get:PathSensitive(PathSensitivity.RELATIVE)

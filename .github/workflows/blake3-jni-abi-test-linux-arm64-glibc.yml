@@ -18,10 +18,10 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
-      - name: BUILD blake3Jni
+      - name: BUILD commonJni
         env:
           SKIP_NATIVE_TARGETS: "true"
-        run: ./gradlew --no-daemon :blake3Jni:buildBlake3Jni
+        run: ./gradlew --no-daemon :commonJni:buildBlake3Jni
       - name: common:jvmTest
         env:
           SKIP_NATIVE_TARGETS: "true"
@@ -29,8 +29,8 @@ jobs:
       - name: Show test report if failed
         if: failure()
         run: cat /home/runner/work/konaResource/konaResource/common/build/reports/tests/jvmTest/index.html || true
-      - name: Show blake3Jni .so info
-        run: file blake3Jni/build/native/libblake3_jni.so && ldd blake3Jni/build/native/libblake3_jni.so || true
+      - name: Show commonJni .so info
+        run: file commonJni/build/native/libblake3_jni.so && ldd commonJni/build/native/libblake3_jni.so || true
       - name: BENCHMARK (jvm)
         env:
           SKIP_NATIVE_TARGETS: "true"

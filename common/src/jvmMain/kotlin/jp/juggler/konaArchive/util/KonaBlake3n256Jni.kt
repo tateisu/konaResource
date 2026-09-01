@@ -64,12 +64,14 @@ private object Blake3Jni {
     )
 
     private fun loadBundledLibrary() {
-        val input = Blake3Jni::class.java.getResourceAsStream(LIBRARY_RESOURCE)
+        val libraryResource = bundledLibraryResource()
+        val input = libraryResource?.let { Blake3Jni::class.java.getResourceAsStream(it) }
         if (input == null) {
             System.loadLibrary(LIBRARY_NAME)
             return
         }
-        val libraryFile = Files.createTempFile("blake3_jni-", ".so")
+        val extension = libraryResource.substringAfterLast('.', missingDelimiterValue = "")
+        val libraryFile = Files.createTempFile("blake3_jni-", ".$extension")
         libraryFile.toFile().deleteOnExit()
         input.use {
             Files.copy(it, libraryFile, StandardCopyOption.REPLACE_EXISTING)
@@ -77,7 +79,30 @@ private object Blake3Jni {
         System.load(libraryFile.toAbsolutePath().toString())
     }
 
+    private fun bundledLibraryResource(): String? {
+        val osName = System.getProperty("os.name").lowercase()
+        val architecture = System.getProperty("os.arch").lowercase()
+        return when {
+            osName.contains("linux") -> when (architecture) {
+                "amd64", "x86_64" -> "$LIBRARY_RESOURCE_ROOT/linux-x86_64/libblake3_jni.so"
+                "aarch64", "arm64" -> "$LIBRARY_RESOURCE_ROOT/linux-aarch64/libblake3_jni.so"
+                else -> null
+            }
+
+            osName.contains("windows") -> when (architecture) {
+                "amd64", "x86_64" -> "$LIBRARY_RESOURCE_ROOT/windows-x86_64/blake3_jni.dll"
+                "aarch64", "arm64" -> "$LIBRARY_RESOURCE_ROOT/windows-aarch64/blake3_jni.dll"
+                else -> null
+            }
+
+            osName.contains("mac") || osName.contains("darwin") ->
+                "$LIBRARY_RESOURCE_ROOT/macos-universal/libblake3_jni.dylib"
+
+            else -> null
+        }
+    }
+
     private const val LIBRARY_NAME = "blake3_jni"
     private const val LIBRARY_PATH_PROPERTY = "kona.blake3.jni.path"
-    private const val LIBRARY_RESOURCE = "/jp/juggler/konaArchive/native/linux-x86_64/libblake3_jni.so"
+    private const val LIBRARY_RESOURCE_ROOT = "/jp/juggler/konaArchive/native"
 }

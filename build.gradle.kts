@@ -14,6 +14,17 @@ group = "jp.juggler.konaResource"
 version = "0.1.5"
 
 val detektFormatting = libs.detektFormatting
+val localMavenDirectory = layout.projectDirectory.dir("localMaven")
+val publishLocal = gradle.startParameter.taskNames.any { taskName ->
+    taskName.substringAfterLast(':') in setOf("publishPluginLocal", "publishLocalMaven")
+}
+val localVersion = "latest"
+
+if (publishLocal) {
+    gradle.afterProject {
+        if (path == ":common" || path == ":plugin") version = localVersion
+    }
+}
 
 subprojects {
     pluginManager.apply("io.gitlab.arturbosch.detekt")
@@ -32,6 +43,12 @@ subprojects {
 
     plugins.withId("maven-publish") {
         val publishing = extensions.getByType<PublishingExtension>()
+        publishing.repositories {
+            maven {
+                name = "localMaven"
+                url = localMavenDirectory.asFile.toURI()
+            }
+        }
         publishing.publications.withType<MavenPublication>().configureEach {
             pom {
                 name.set("Kona Resource")
@@ -69,4 +86,32 @@ subprojects {
             }
         }
     }
+}
+
+val publishLocalMaven = tasks.register("publishLocalMaven") {
+    group = "publishing"
+    description = "Publishes `plugin` and `common` into localMaven."
+    dependsOn(
+        // ---------------------------------
+        // common (plugin用)
+        // KMPのルートartifact + JVM部分
+        // タスク名は自動生成の長いやつだ…
+
+        // publish KMPのルートartifact
+        ":common:publishKotlinMultiplatformPublicationToLocalMavenRepository",
+
+        // publish local artifact JVM
+        ":common:publishJvmPublicationToLocalMavenRepository",
+
+        // ---------------------------------
+        // plugin
+        // pluigはKMPではなくJVMオンリーなので、artifactとmarkerをpushlishする
+        // タスク名は自動生成の長いやつだ…
+
+        // publish artifact
+        ":plugin:publishPluginMavenPublicationToLocalMavenRepository",
+
+        // public marker
+        ":plugin:publishKonaResourceLocalPluginMarkerMavenPublicationToLocalMavenRepository",
+    )
 }

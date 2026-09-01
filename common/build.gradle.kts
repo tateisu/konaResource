@@ -1,4 +1,6 @@
-import jp.juggler.konaResource.buildlogic.macosEnabled
+import jp.juggler.konaResource.buildlogic.JniBuildTarget
+import jp.juggler.konaResource.buildlogic.availableJniBuildTargets
+import jp.juggler.konaResource.buildlogic.konaTargets
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
@@ -12,9 +14,6 @@ plugins {
 
 group = "jp.juggler.konaResource"
 version = rootProject.version
-
-// -Pmacos=true/false の上書きを考慮した macOS ビルドの有効/無効 (build-logic のユーティリティ)。
-val enableMacos: Boolean = macosEnabled()
 
 // warning, PIC options, optimization for this project.
 val nativeCCompilerOptions = listOf("-W", "-Wall", "-O3", "-fPIC")
@@ -44,19 +43,28 @@ publishing {
 }
 
 kotlin {
+    konaTargets()
+
     jvm {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_17)
         }
     }
-    linuxX64()
-    linuxArm64()
-    if (enableMacos) {
-        macosArm64()
-    }
-    mingwX64()
 
-    fun KotlinNativeTarget.configureCinterops() {
+    sourceSets {
+        commonMain.dependencies {
+            implementation(libs.okio)
+            implementation(libs.kotlinxCoroutinesCore)
+        }
+        nativeMain.dependencies {
+            implementation(libs.lz4Native)
+        }
+        jvmMain.dependencies {
+            implementation(libs.lz4Java)
+        }
+    }
+
+    targets.withType<KotlinNativeTarget>().configureEach {
         compilations.getByName("main") {
             cinterops {
                 create("lz4") {
@@ -90,31 +98,52 @@ kotlin {
             }
         }
     }
-
-    linuxX64 { configureCinterops() }
-    linuxArm64 { configureCinterops() }
-    if (enableMacos) {
-        macosArm64 { configureCinterops() }
-    }
-    mingwX64 { configureCinterops() }
-
-    sourceSets {
-        commonMain.dependencies {
-            implementation(libs.okio)
-            implementation(libs.kotlinxCoroutinesCore)
-        }
-        nativeMain.dependencies {
-            implementation(libs.lz4Native)
-        }
-        jvmMain.dependencies {
-            implementation(libs.lz4Java)
-        }
-    }
 }
 
 tasks.named<ProcessResources>("jvmProcessResources") {
-    dependsOn(":blake3Jni:buildBlake3Jni")
-    from(rootProject.file("blake3Jni/build/native/linuxX64/libblake3_jni.so")) {
-        into("jp/juggler/konaArchive/native/linux-x86_64")
+    val availableTargets = project.availableJniBuildTargets()
+    availableTargets.forEach { target ->
+        when (target) {
+            JniBuildTarget.LinuxX64 -> {
+                dependsOn(":commonJni:buildBlake3JniLinuxX64")
+                from(rootProject.file("commonJni/build/native/linuxX64/libblake3_jni.so")) {
+                    into("jp/juggler/konaArchive/native/linux-x86_64")
+                }
+            }
+
+            JniBuildTarget.LinuxArm64 -> {
+                dependsOn(":commonJni:buildBlake3JniLinuxArm64")
+                from(rootProject.file("commonJni/build/native/linuxArm64/libblake3_jni.so")) {
+                    into("jp/juggler/konaArchive/native/linux-aarch64")
+                }
+            }
+
+            JniBuildTarget.WindowsX64 -> {
+                dependsOn(":commonJni:buildBlake3JniWindowsX64")
+                from(rootProject.file("commonJni/build/native/windowsX64/blake3_jni.dll")) {
+                    into("jp/juggler/konaArchive/native/windows-x86_64")
+                }
+            }
+
+            JniBuildTarget.WindowsArm64 -> {
+                dependsOn(":commonJni:buildBlake3JniWindowsArm64")
+                from(rootProject.file("commonJni/build/native/windowsArm64/blake3_jni.dll")) {
+                    into("jp/juggler/konaArchive/native/windows-aarch64")
+                }
+            }
+
+            JniBuildTarget.MacosX64,
+            JniBuildTarget.MacosArm64,
+            -> Unit
+        }
+    }
+
+    if (JniBuildTarget.MacosX64 in availableTargets &&
+        JniBuildTarget.MacosArm64 in availableTargets
+    ) {
+        dependsOn(":commonJni:buildBlake3JniMacosUniversal2")
+        from(rootProject.file("commonJni/build/native/macosUniversal2/libblake3_jni.dylib")) {
+            into("jp/juggler/konaArchive/native/macos-universal")
+        }
     }
 }

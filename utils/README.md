@@ -1,3 +1,4 @@
-
-Note: Kotlin Multiplatform は依存モジュールを埋め込まず、
-公開時に utils を依存 artifact として参照する
+# utils モジュール
+- common,plugin などの公開アーティファクトからは使われない
+- cli, test, benchmark などの補助ツールで使われる
+- 中身は Pure Kotlin だけ

@@ -23,17 +23,9 @@ tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJ
 }
 
 tasks.register<Copy>("deploy") {
+    description = "copy cli fatJar to rootProject dir"
     dependsOn(tasks.named("shadowJar"))
     from(tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJar"))
     into(rootProject.layout.projectDirectory)
     rename { "konaArchive.jar" }
-    doLast {
-        val launcher = rootProject.file("konaArchive")
-        launcher.writeText(
-            """#!/bin/sh
-            exec java -jar "$(dirname "$0")/konaArchive.jar" "$@"
-            """.trimIndent() + "\n",
-        )
-        launcher.setExecutable(true)
-    }
 }

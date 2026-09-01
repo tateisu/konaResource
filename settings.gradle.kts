@@ -1,5 +1,6 @@
 pluginManagement {
     repositories {
+        maven { url = uri("$rootDir/localMaven") }
         gradlePluginPortal()
         mavenCentral()
     }
@@ -22,6 +23,7 @@ nmcpSettings {
 dependencyResolutionManagement {
     @Suppress("UnstableApiUsage")
     repositories {
+        maven { url = uri("$rootDir/localMaven") }
         mavenCentral()
     }
 }
@@ -29,7 +31,7 @@ dependencyResolutionManagement {
 rootProject.name = "konaResource"
 
 include(
-    ":blake3Jni",
+    ":commonJni",
     ":common",
     ":utils",
     ":test",
@@ -38,8 +40,15 @@ include(
     // 公開済みプラグイン(0.1.4)が config cache 非互換のため一時的に除外。
     // プラグインを再公開したら再び有効化する。
     // ":sample1",
-    ":sample2",
     ":empty",
     ":cli",
     ":benchmark",
 )
+
+// publishPluginLocalはsample2のplugin markerを生成する前に実行されるため、
+// publish処理中だけsample2を設定対象から外す。
+if (gradle.startParameter.taskNames.none {
+        it.substringAfterLast(':') in setOf("publishPluginLocal", "publishLocalMaven")
+    }) {
+    include(":sample2")
+}
