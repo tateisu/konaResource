@@ -2,6 +2,8 @@ import jp.juggler.konaResource.buildlogic.DeployBinarySpec
 import jp.juggler.konaResource.buildlogic.DeployKonaCommonTestTask
 import jp.juggler.konaResource.buildlogic.availableKonaBuildTarget
 import jp.juggler.konaResource.buildlogic.konaTargets
+import org.gradle.api.tasks.Exec
+import org.gradle.api.tasks.JavaExec
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
@@ -17,6 +19,22 @@ group = "jp.juggler.konaResource"
 version = rootProject.version
 
 val availableKonaBuildTargets = availableKonaBuildTarget()
+
+val hostArch: String by lazy {
+    val osName = System.getProperty("os.name").lowercase()
+    val osArch = System.getProperty("os.arch").lowercase()
+    when {
+        osName.contains("linux") -> when (osArch) {
+            "amd64", "x86_64", "x64" -> "LinuxX64"
+            "aarch64", "arm64" -> "LinuxArm64"
+            else -> error("host is Linux, but os.arch is unexpected. [$osArch]")
+        }
+
+        osName.contains("windows") && osArch in setOf("amd64", "x86_64", "x64") -> "MingwX64"
+        osName.contains("mac") && osArch in setOf("aarch64", "arm64") -> "MacosArm64"
+        else -> error("Unsupported host platform. os.name=[$osName], os.arch=[$osArch]")
+    }
+}
 
 kotlin {
     konaTargets()
@@ -69,6 +87,25 @@ kotlin {
             implementation(libs.kotestFrameworkEngine)
             implementation(libs.kotestAssertions)
         }
+    }
+}
+
+tasks.register("runDebug") {
+    group = "run"
+    description = "Runs the test CLI for the host architecture."
+    dependsOn("runDebugExecutable$hostArch")
+}
+
+tasks.named<Exec>("runDebugExecutable$hostArch") {
+    providers.gradleProperty("args").orNull
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+        ?.let { arguments -> args(arguments.split(Regex("\\s+"))) }
+}
+
+gradle.projectsEvaluated {
+    tasks.named<JavaExec>("jvmRun") {
+        mainClass.set("jp.juggler.konaResource.test.MainKt")
     }
 }
 
@@ -126,6 +163,14 @@ tasks.register("deploy", DeployKonaCommonTestTask::class.java) {
     dependsOn(fatJar)
     cliNativeBinaries.forEach { dependsOn(it.linkTaskName) }
     destinationDirectory.set(rootProject.layout.projectDirectory)
+    deployedFiles.from(
+        rootProject.file("konaCommonTest.jar"),
+        cliNativeBinaries.map { binary ->
+            val binaryFile = tasks.named<KotlinNativeLink>(binary.linkTaskName).get().outputFile.get()
+            val extension = binaryFile.extension.takeIf { it.isNotEmpty() && it != "kexe" }?.let { ".$it" } ?: ""
+            rootProject.file("konaCommonTest-${binary.displayName}$extension")
+        },
+    )
     fatJarFile.set(fatJar.flatMap { it.archiveFile })
     binaryFiles.from(
         cliNativeBinaries.map { binary ->

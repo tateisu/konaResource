@@ -135,7 +135,7 @@ public repository なら標準 GitHub-hosted runner は原則無料・無制限�
 仮に各ABIを10分ずつ回しても、無料枠外で約 $0.83/一式 です。大半がmacOS料金です。
 なので、実機をレンタルするより「GitHub ActionsにABIテスト用matrixを置く」のがまず最適だと思います。
 特に Gradle plugin が JNI/JNA/native executable を同梱するタイプなら、
-実際に各runner上で `./gradlew check benchmark:jvmBenchmark` を走らせれば
+実際に各runner上で `./gradlew check benchmark:runJvm` を走らせれば
 クロスコンパイルだけでは拾えないロード時の問題まで検出できます。
 Gradle 自身も GitHub Actions での matrix build を公式に案内しています。([Gradle][4])
 

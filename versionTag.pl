@@ -57,12 +57,11 @@ if( @versions !=1 ){
 }
 
 # ビルドを通ることを確認
-cmd qq(
-    ./gradlew
-    build
-    check
-);
+cmd qq(./gradlew build check test:deploy benchmark:deploy);
 cmd qq(./runSample2.sh);
+cmd qq(./gradlew test:runDebug -Pargs="test");
+cmd qq(./gradlew test:jvmRun --args="test");
+cmd qq(./gradlew benchmark:runRelease benchmark:jvmRun);
 
 # 未コミットまたは未追加の変更をチェック
 my @lines = grep{ length $_} map{ trim $_ } `git status --porcelain --untracked-files=all`;

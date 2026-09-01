@@ -3,20 +3,14 @@ package jp.juggler.konaResource.benchmark
 import jp.juggler.konaArchive.readKonaFiles
 import jp.juggler.konaArchive.util.Lz4Codec
 import jp.juggler.konaArchive.util.defaultLz4Codec
-import kotlinx.benchmark.Benchmark
-import kotlinx.benchmark.Scope
-import kotlinx.benchmark.Setup
-import kotlinx.benchmark.State
 import okio.Buffer
 
-@State(Scope.Benchmark)
 open class KonaLz4Benchmark(
     private val codec: Lz4Codec = defaultLz4Codec,
 ) {
     private lateinit var input: ByteArray
     private lateinit var compressed: ByteArray
 
-    @Setup
     fun setup() {
         val source = Buffer()
         sourceFiles().forEach { source.write(it) }
@@ -25,10 +19,8 @@ open class KonaLz4Benchmark(
         compressed = compressInput().readByteArray()
     }
 
-    @Benchmark
     open fun compress(): Int = compressInput().size.toInt()
 
-    @Benchmark
     open fun decompress(): Int {
         val source = Buffer().write(compressed)
         return codec.decompress(

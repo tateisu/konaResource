@@ -2,22 +2,15 @@ package jp.juggler.konaResource.benchmark
 
 import jp.juggler.konaArchive.util.KonaDigest
 import jp.juggler.konaArchive.util.defaultKonaSha256
-import kotlinx.benchmark.Benchmark
-import kotlinx.benchmark.Scope
-import kotlinx.benchmark.Setup
-import kotlinx.benchmark.State
 
-@State(Scope.Benchmark)
 open class KonaSha256Benchmark {
     private lateinit var files: List<ByteArray>
 
-    @Setup
     fun setup() {
         files = benchmarkSourceFiles()
         check(files.isNotEmpty()) { "Unable to find common/src source files" }
     }
 
-    @Benchmark
     open fun defaultImplementation(): Int = digestAll { defaultSha256() }
 
     private fun digestAll(factory: () -> KonaDigest): Int {

@@ -26,7 +26,6 @@ kotlin {
         commonMain.dependencies {
             implementation(project(":common"))
             implementation(libs.kotlinxAtomicfu)
-            implementation(libs.kotlinxBenchmarkRuntime)
             implementation(libs.kotlinxCoroutinesCore)
             implementation(libs.kotlinxDatetime)
             implementation(libs.okio)

@@ -4,7 +4,6 @@
 kotest = "6.2.4"
 kotlin = "2.4.10" # kotlinMultiplatform, kotlinSerialization, kotlinJvm
 kotlinGradlePluginLib = "2.1.20"
-kotlinxBenchmark = "0.4.19"
 kotlinxAtomicfu = "0.23.1"
 ksp = "2.3.11" # kotest に必要
 detekt = "1.23.8"
@@ -20,7 +19,6 @@ okio = "3.9.0"
 kotest = { id = "io.kotest", version.ref = "kotest" }
 kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
-kotlinxBenchmark = { id = "org.jetbrains.kotlinx.benchmark", version.ref = "kotlinxBenchmark" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
@@ -35,7 +33,6 @@ detektFormatting = { module = "io.gitlab.arturbosch.detekt:detekt-formatting", v
 kotlinxCoroutinesCore = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutinesCore" }
 kotlinxAtomicfu = { module = "org.jetbrains.kotlinx:atomicfu", version.ref = "kotlinxAtomicfu" }
 kotlinxDatetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
-kotlinxBenchmarkRuntime = { module = "org.jetbrains.kotlinx:kotlinx-benchmark-runtime", version.ref = "kotlinxBenchmark" }
 lz4Java = { module = "org.lz4:lz4-java", version.ref = "lz4Java" }
 lz4Native = { module = "com.ensody.nativebuilds:lz4", version.ref = "lz4Native" }
 okio = { module = "com.squareup.okio:okio", version.ref = "okio" }

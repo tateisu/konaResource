@@ -2,13 +2,13 @@ import jp.juggler.konaResource.buildlogic.DeployBinarySpec
 import jp.juggler.konaResource.buildlogic.DeployKonaNativeBinariesTask
 import jp.juggler.konaResource.buildlogic.availableKonaBuildTarget
 import jp.juggler.konaResource.buildlogic.konaTargets
+import org.gradle.api.tasks.JavaExec
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinNativeLink
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.kotlinxBenchmark)
     id("jp.juggler.konaResource.buildlogic")
 }
 
@@ -20,6 +20,22 @@ val availableNativeTargets = if (skipNativeTargets) {
     emptyList()
 } else {
     availableKonaBuildTarget()
+}
+
+val hostArch: String by lazy {
+    val osName = System.getProperty("os.name").lowercase()
+    val osArch = System.getProperty("os.arch").lowercase()
+    when {
+        osName.contains("linux") -> when (osArch) {
+            "amd64", "x86_64", "x64" -> "LinuxX64"
+            "aarch64", "arm64" -> "LinuxArm64"
+            else -> error("host is Linux, but os.arch is unexpected. [$osArch]")
+        }
+
+        osName.contains("windows") && osArch in setOf("amd64", "x86_64", "x64") -> "MingwX64"
+        osName.contains("mac") && osArch in setOf("aarch64", "arm64") -> "MacosArm64"
+        else -> error("Unsupported host platform. os.name=[$osName], os.arch=[$osArch]")
+    }
 }
 
 kotlin {
@@ -41,7 +57,6 @@ kotlin {
         commonMain.dependencies {
             implementation(project(":common"))
             implementation(project(":utils"))
-            implementation(libs.kotlinxBenchmarkRuntime)
             implementation(libs.okio)
         }
         nativeMain.dependencies {
@@ -53,28 +68,29 @@ kotlin {
     }
 }
 
-benchmark {
-    targets {
-        register("jvm")
-        register("linuxX64")
+gradle.projectsEvaluated {
+    tasks.named<JavaExec>("jvmRun") {
+        mainClass.set("jp.juggler.konaResource.benchmark.MainKt")
     }
-    configurations {
-        named("main") {
-            warmups = 3
-            iterations = 3
-            iterationTime = 500
-            iterationTimeUnit = "ms"
-        }
-        register("smoke") {
-            // warmup iteration の回数
-            // 1以上でないとiterationが実行されない
-            warmups = 1
-            // measurement 時間 ≈ iterations(回数) × (iterationTime*iterationTimeUnit)(時間)
-            iterations = 1
-            iterationTime = 500
-            iterationTimeUnit = "ms"
-        }
+}
+
+if (!skipNativeTargets) {
+    tasks.register("runRelease") {
+        group = "run"
+        description = "Runs the release benchmark for the host architecture."
+        dependsOn("runReleaseExecutable$hostArch")
     }
+}
+
+tasks.register<org.gradle.api.tasks.JavaExec>("runJvm") {
+    group = "run"
+    description = "Runs the JVM benchmark."
+    dependsOn("jvmMainClasses")
+    mainClass.set("jp.juggler.konaResource.benchmark.MainKt")
+    classpath(
+        tasks.named("compileKotlinJvm").map { it.outputs.files },
+        configurations.named("jvmRuntimeClasspath"),
+    )
 }
 
 val fatJar = tasks.register<Jar>("konaBenchmarkFatJar") {
@@ -105,6 +121,15 @@ tasks.register("deploy", DeployKonaNativeBinariesTask::class.java) {
         dependsOn("linkReleaseExecutable$suffix")
     }
     destinationDirectory.set(rootProject.layout.projectDirectory)
+    deployedFiles.from(
+        rootProject.file("konaBenchmark.jar"),
+        availableNativeTargets.map { target ->
+            val suffix = target.targetName.replaceFirstChar { it.uppercase() }
+            val binaryFile = tasks.named<KotlinNativeLink>("linkReleaseExecutable$suffix").get().outputFile.get()
+            val extension = binaryFile.extension.takeIf { it.isNotEmpty() && it != "kexe" }?.let { ".$it" } ?: ""
+            rootProject.file("konaBenchmark-${target.targetName}$extension")
+        },
+    )
     binaryFiles.from(
         availableNativeTargets.map { target ->
             val suffix = target.targetName.replaceFirstChar { it.uppercase() }

@@ -116,14 +116,14 @@ java -jar konaCommonTest.jar test
 ## Run benchmarks
 ```shell
 
-# Execute all benchmarks
-./gradlew :benchmark:benchmark
+# Execute benchmark on the JVM
+./gradlew :benchmark:runJvm
 
-# Executes benchmark for 'linuxX64'
-./gradlew :benchmark:linuxX64Benchmark
+# Execute benchmark on the host's Native target
+./gradlew :benchmark:runRelease
 
-# Execute benchmark for 'jvm'
-./gradlew :benchmark:jvmBenchmark
+# Build and deploy standalone benchmark artifacts
+./gradlew :benchmark:deploy
 ```
 
 ## Build prerequisites
