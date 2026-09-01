@@ -1,6 +1,7 @@
 package jp.juggler.konaResource.plugin
 
 import jp.juggler.konaArchive.konaArchivePack
+import jp.juggler.konaArchive.util.Lz4Options
 import org.gradle.api.Action
 import org.gradle.api.DefaultTask
 import org.gradle.api.Plugin
@@ -12,7 +13,6 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
-import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
@@ -29,7 +29,6 @@ class KonaResourcePlugin : Plugin<Project> {
         val generate = project.tasks.register("generateKonaResource", GenerateKonaResourceTask::class.java)
         generate.configure { task ->
             task.outputDirectory.set(project.layout.buildDirectory.dir("generated/konaResource"))
-            task.sourceExtension = extension
         }
         project.afterEvaluate {
             generate.configure { task ->
@@ -50,7 +49,7 @@ class KonaResourcePlugin : Plugin<Project> {
         project.tasks.register("konaResourceObjects").configure { task ->
             task.dependsOn(generate)
             task.doLast {
-                project.logger.lifecycle(
+                task.logger.lifecycle(
                     "Kona Resource objects are in ${generate.get().outputDirectory.get().asFile}",
                 )
             }
@@ -111,23 +110,31 @@ abstract class GenerateKonaResourceTask @Inject constructor(
     @get:OutputDirectory
     abstract val outputDirectory: DirectoryProperty
 
-    @get:Internal
-    lateinit var sourceExtension: KonaResourceExtension
-
     @TaskAction
     @Suppress("LongMethod")
     fun generate() {
         val output = outputDirectory.get().asFile
         output.mkdirs()
-        sourceExtension.modules.forEach { (name, rawDirectory) ->
-            val inputDirectory = project.file(rawDirectory)
+        val options = Lz4Options(
+            compressionLevel = lz4CompressionLevel.get(),
+            blockSize = lz4BlockSizeID.get(),
+            blockLinked = lz4BlockMode.get() != "LZ4F_blockIndependent",
+            contentSizeFlag = lz4ContentSizeFlag.get(),
+            contentChecksumFlag = lz4ContentChecksumFlag.get(),
+            blockChecksumFlag = lz4blockChecksumFlag.get(),
+            autoFlush = lz4AutoFlush.get(),
+            favorDecSpeed = lz4FavorDecSpeed.get(),
+        )
+        val names = moduleNames.get()
+        val directories = resourceDirectories.files.toList()
+        names.zip(directories).forEach { (name, inputDirectory) ->
             val safeName = name.replace(Regex("[^A-Za-z0-9_]"), "_")
             val archiveFile = output.resolve("$safeName.bin")
             konaArchivePack(
                 archivePath = archiveFile.toPath(),
                 inputDirectory = inputDirectory.toPath(),
                 previousArchivePath = archiveFile.takeIf { it.isFile }?.toPath(),
-                options = sourceExtension.options(),
+                options = options,
             )
             val assembly = output.resolve("$safeName.S")
             val symbol = "konaResource_$safeName"

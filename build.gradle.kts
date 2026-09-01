@@ -11,7 +11,7 @@ plugins {
 }
 
 group = "jp.juggler.konaResource"
-version = "0.1.4"
+version = "0.1.5"
 
 val detektFormatting = libs.detektFormatting
 

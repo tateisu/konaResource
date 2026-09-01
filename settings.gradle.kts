@@ -4,7 +4,7 @@ pluginManagement {
         mavenCentral()
     }
 
-    includeBuild("plugin-build")
+    includeBuild("build-logic")
 }
 
 plugins {
@@ -31,10 +31,13 @@ rootProject.name = "konaResource"
 include(
     ":blake3Jni",
     ":common",
+    ":utils",
     ":test",
     ":test-ksp",
     ":plugin",
-    ":sample1",
+    // 公開済みプラグイン(0.1.4)が config cache 非互換のため一時的に除外。
+    // プラグインを再公開したら再び有効化する。
+    // ":sample1",
     ":sample2",
     ":empty",
     ":cli",

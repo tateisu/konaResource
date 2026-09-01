@@ -1,13 +1,14 @@
-import org.gradle.api.GradleException
-import java.io.IOException
+import jp.juggler.konaResource.buildlogic.Blake3JniBuildTask
+import jp.juggler.konaResource.buildlogic.Blake3JniBuildUnit
+import jp.juggler.konaResource.buildlogic.macosEnabled
 
 plugins {
     base
+    id("jp.juggler.konaResource.buildlogic")
 }
 
-// -Pmacos=true を指定したときのみ macos ターゲットを含める。
-// macOS ターゲットのJNIビルドは macOS ホストでしか処理できないため。
-val enableMacos: Boolean = (findProperty("macos") as? String)?.toBoolean() == true
+// -Pmacos=true/false の上書きを考慮した macOS ビルドの有効/無効 (build-logic のユーティリティ)。
+val enableMacos: Boolean = macosEnabled()
 
 val sourceDirectory = file("src/main/c")
 val blake3SourceDirectory = sourceDirectory.resolve("blake3")
@@ -90,140 +91,59 @@ jniBuilds += JniBuild(
     linkFlags = listOf("-shared", "-static-libgcc"),
 )
 
-fun checkCompiler(compiler: String) {
-    try {
-        ProcessBuilder(compiler, "--version").inheritIO().start().waitFor()
-    } catch (e: IOException) {
-        throw GradleException(
-            "Cross compiler '$compiler' for target not found. Install it or exclude the target.",
-            e,
-        )
-    }
-}
-
-fun runCommand(vararg command: String) {
-    check(ProcessBuilder(*command).inheritIO().start().waitFor() == 0) {
-        "Command failed: ${command.joinToString(" ")}"
-    }
-}
-
 fun registerJniBuild(build: JniBuild) {
     val taskName = "buildBlake3Jni${build.name.replaceFirstChar { it.uppercase() }}"
     // ターゲットごとのサブディレクトリに出力して、DLL名の衝突(linux x64/arm64 の .so 等)を避ける。
     val library = nativeBuildDirectory.map { it.dir(build.name).file(build.libraryName) }
-    val includeDirs = listOf(
-        "-I$sourceDirectory",
-        "-I$blake3SourceDirectory",
-        "-I$jniIncludeDir",
-        "-I${file("$jniIncludeDir/${build.jniPlatformInclude}")}",
-    )
-    tasks.register(taskName) {
+    tasks.register(taskName, Blake3JniBuildTask::class.java) {
         group = "build"
         description = "Builds the BLAKE3 JNI shared library for ${build.name}"
-        inputs.files(build.sources, jniIncludeDir)
-        outputs.file(library)
-        doLast {
-            checkCompiler(build.compiler)
-            check(file("$jniIncludeDir/jni.h").isFile) {
-                "jni.h was not found under $jniIncludeDir"
-            }
-            val outputDirectory = nativeBuildDirectory.get().asFile
-            outputDirectory.mkdirs()
-            val objects = build.sources.map { source ->
-                val objectFile = outputDirectory.resolve("objects/${build.name}/${source.name}.o")
-                objectFile.parentFile.mkdirs()
-                objectFile
-            }
-            build.sources.zip(objects).forEach { (source, objectFile) ->
-                runCommand(
-                    build.compiler,
-                    *build.cflags.toTypedArray(),
-                    "-c", source.absolutePath,
-                    *includeDirs.toTypedArray(),
-                    "-o", objectFile.absolutePath,
-                )
-            }
-            runCommand(
-                build.compiler,
-                *build.linkFlags.toTypedArray(),
-                "-o", library.get().asFile.absolutePath,
-                *objects.map { it.absolutePath }.toTypedArray(),
-            )
-        }
+        compiler.set(build.compiler)
+        linkFlags.set(build.linkFlags)
+        buildUnits.set(listOf(Blake3JniBuildUnit(arch = "", sources = build.sources, cflags = build.cflags)))
+        includeDirs.setFrom(
+            sourceDirectory,
+            blake3SourceDirectory,
+            jniIncludeDir,
+            file("$jniIncludeDir/${build.jniPlatformInclude}"),
+        )
+        jniHeader.set(file("$jniIncludeDir/jni.h"))
+        outputLibrary.set(library)
     }
 }
 
 jniBuilds.forEach { registerJniBuild(it) }
 
-// macOS universal2 (x86_64 + arm64)。macOS ホストで -Pmacos=true を指定したときのみ。
+// macOS universal2 (x86_64 + arm64)。macOS ビルドが可能なときのみ。
 if (enableMacos) {
     val macosUniversal = nativeBuildDirectory.map { it.dir("macosUniversal2").file("libblake3_jni.dylib") }
-    val includeDirs = listOf(
-        "-I$sourceDirectory",
-        "-I$blake3SourceDirectory",
-        "-I$jniIncludeDir",
-        "-I${file("$jniIncludeDir/darwin")}",
-    )
-    tasks.register("buildBlake3JniMacosUniversal2") {
+    tasks.register("buildBlake3JniMacosUniversal2", Blake3JniBuildTask::class.java) {
         group = "build"
         description = "Builds the BLAKE3 JNI shared library for macOS universal2 (x86_64 + arm64)"
-        inputs.files(commonSources + x86AsmSources + neonSource, jniIncludeDir)
-        outputs.file(macosUniversal)
-        doLast {
-            checkCompiler("cc")
-            check(file("$jniIncludeDir/jni.h").isFile) {
-                "jni.h was not found under $jniIncludeDir"
-            }
-            val outputDirectory = nativeBuildDirectory.get().asFile
-            outputDirectory.mkdirs()
-            val x86Directory = outputDirectory.resolve("macos-x86_64")
-            val armDirectory = outputDirectory.resolve("macos-arm64")
-            x86Directory.mkdirs()
-            armDirectory.mkdirs()
-
-            fun compile(arch: String, directory: File, sources: List<File>, cflags: List<String>) {
-                val objects = sources.map { source ->
-                    val objectFile = directory.resolve("${source.name}.o")
-                    runCommand(
-                        "cc",
-                        *cflags.toTypedArray(),
-                        "-arch", arch,
-                        "-c", source.absolutePath,
-                        *includeDirs.toTypedArray(),
-                        "-o", objectFile.absolutePath,
-                    )
-                    objectFile
-                }
-                val dylib = directory.resolve("libblake3_jni.dylib")
-                runCommand(
-                    "cc",
-                    "-shared",
-                    "-arch", arch,
-                    "-o", dylib.absolutePath,
-                    *objects.map { it.absolutePath }.toTypedArray(),
-                )
-            }
-
-            compile(
-                arch = "x86_64",
-                directory = x86Directory,
-                sources = commonSources + x86AsmSources,
-                cflags = listOf("-Wall", "-Wextra", "-O3", "-fPIC", "-mavx", "-mavx2", "-mavx512f", "-mavx512vl"),
-            )
-            compile(
-                arch = "arm64",
-                directory = armDirectory,
-                sources = commonSources + neonSource,
-                cflags = listOf("-Wall", "-Wextra", "-O3", "-fPIC", "-DBLAKE3_USE_NEON=1"),
-            )
-            runCommand(
-                "lipo",
-                "-create",
-                x86Directory.resolve("libblake3_jni.dylib").absolutePath,
-                armDirectory.resolve("libblake3_jni.dylib").absolutePath,
-                "-output", macosUniversal.get().asFile.absolutePath,
-            )
-        }
+        compiler.set("cc")
+        linkFlags.set(listOf("-shared"))
+        buildUnits.set(
+            listOf(
+                Blake3JniBuildUnit(
+                    arch = "x86_64",
+                    sources = commonSources + x86AsmSources,
+                    cflags = listOf("-Wall", "-Wextra", "-O3", "-fPIC", "-mavx", "-mavx2", "-mavx512f", "-mavx512vl"),
+                ),
+                Blake3JniBuildUnit(
+                    arch = "arm64",
+                    sources = commonSources + neonSource,
+                    cflags = listOf("-Wall", "-Wextra", "-O3", "-fPIC", "-DBLAKE3_USE_NEON=1"),
+                ),
+            ),
+        )
+        includeDirs.setFrom(
+            sourceDirectory,
+            blake3SourceDirectory,
+            jniIncludeDir,
+            file("$jniIncludeDir/darwin"),
+        )
+        jniHeader.set(file("$jniIncludeDir/jni.h"))
+        outputLibrary.set(macosUniversal)
     }
 }
 

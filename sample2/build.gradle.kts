@@ -1,7 +1,7 @@
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-    // Use the plugin implementation from plugin-build, not the published plugin.
-    id("jp.juggler.konaResource.local") version "0.1.4"
+    // Use the plugin implementation from build-logic, not the published plugin.
+    id("jp.juggler.konaResource.local") version "0.1.5"
 }
 
 konaResource {

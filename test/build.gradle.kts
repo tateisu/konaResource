@@ -1,10 +1,14 @@
-import org.gradle.api.file.DuplicatesStrategy
+import jp.juggler.konaResource.buildlogic.DeployBinarySpec
+import jp.juggler.konaResource.buildlogic.DeployKonaCommonTestTask
+import jp.juggler.konaResource.buildlogic.isCompilerAvailable
+import jp.juggler.konaResource.buildlogic.macosEnabled
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinNativeLink
 
 plugins {
+    id("jp.juggler.konaResource.buildlogic")
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.ksp)
 }
@@ -12,9 +16,8 @@ plugins {
 group = "jp.juggler.konaResource"
 version = rootProject.version
 
-// -Pmacos=true を指定したときのみ macos ターゲットを含める。
-// macOS ターゲットのJNIビルドは macOS ホストでしか処理できないため。
-val enableMacos: Boolean = (findProperty("macos") as? String)?.toBoolean() == true
+// -Pmacos=true/false の上書きを考慮した macOS ビルドの有効/無効 (build-logic のユーティリティ)。
+val enableMacos: Boolean = macosEnabled()
 
 kotlin {
     jvm {
@@ -30,13 +33,14 @@ kotlin {
     mingwX64()
 
     targets.withType<KotlinNativeTarget>().configureEach {
+        val sourceSetKotlin = compilations.getByName("main").defaultSourceSet.kotlin
         // posixMain は default hierarchy にないため、POSIX ターゲット(linux/apple)の main に srcDir で追加する。
         // mingwMain は default hierarchy が自動生成するため(src/mingwMain/kotlin が既定ディレクトリ)、追加不要。
-        if (name != "mingwX64") {
-            compilations.getByName("main").defaultSourceSet.kotlin.srcDir("src/posixMain/kotlin")
-        }
-        // runTest の actual。ターゲット別の KSP 生成 TestClassList を参照するため leaf ソースセットに追加する。
-        compilations.getByName("main").defaultSourceSet.kotlin.srcDir("src/cliRun/kotlin")
+        if (name != "mingwX64") sourceSetKotlin.srcDir("src/posixMain/kotlin")
+
+        // testSpecList の actual。KSP 生成の TestClassList はターゲット別のため、leaf ソースセットに追加する。
+        // (nativeMain のような共有ソースセットでは metadata コンパイルに TestClassList が無く参照できない)
+        sourceSetKotlin.srcDir("src/testSpecs/kotlin")
 
         // CLI のネイティブ実行可能バイナリ。ネイティブターゲットは blake3Jni(JNI) に依存しない。
         binaries.executable {
@@ -46,19 +50,21 @@ kotlin {
     }
 
     sourceSets {
-        // 共有テストクラス・フィクスチャ・CLI は src/main に置く。
+        // 共有テストクラス・フィクスチャ・CLI は src/main に置く
         commonMain {
             kotlin.srcDir("src/main/kotlin")
             dependencies {
+                implementation(project(":utils"))
                 implementation(project(":common"))
-                implementation(libs.okio)
-                implementation(libs.kotlinxDatetime)
-                implementation(libs.kotestFrameworkEngine)
                 implementation(libs.kotestAssertions)
+                implementation(libs.kotestFrameworkEngine)
+                implementation(libs.kotlinxAtomicfu)
+                implementation(libs.kotlinxDatetime)
+                implementation(libs.okio)
             }
         }
         jvmMain {
-            kotlin.srcDir("src/cliRun/kotlin")
+            kotlin.srcDir("src/testSpecs/kotlin")
             dependencies {
                 implementation(libs.kotestFrameworkEngine)
                 implementation(libs.kotestRunner)
@@ -84,50 +90,91 @@ dependencies {
     }
 }
 
-// FatJar(CLI)。blake3Jni の DLL を全プラットフォーム分同梱する。
+// blake3Jni の DLL 情報。buildTask で生成し、resourceDir に同梱する。
+data class JniDll(
+    val compiler: String,
+    val buildTask: String,
+    val sourcePath: String,
+    val resourceDir: String,
+    val required: Boolean = false,
+    val availability: () -> Boolean = { isCompilerAvailable(compiler) },
+    val skipReason: String = "cross compiler '$compiler' not found",
+)
+
+// FatJar(CLI)。利用可能なクロスコンパイラが存在する blake3Jni の DLL のみを同梱する。
+// ビルドできないターゲットは自動的にスキップし、警告を出す
+// (linux-x86_64 の .so は common-jvm の jar が同梱するため必須ではない)。
 val fatJar = tasks.register<Jar>("konaCommonTestFatJar") {
+    description = "テストモジュールのJVM Fat Jarを作成します"
     dependsOn("jvmMainClasses")
-    dependsOn(":blake3Jni:buildBlake3JniLinuxX64")
-    dependsOn(":blake3Jni:buildBlake3JniLinuxArm64")
-    dependsOn(":blake3Jni:buildBlake3JniWindowsX64")
-    dependsOn(":blake3Jni:buildBlake3JniWindowsArm64")
-    if (enableMacos) {
-        dependsOn(":blake3Jni:buildBlake3JniMacosUniversal2")
+    val blake3Jni = rootProject.project(":blake3Jni")
+    val jniDlls = listOf(
+        JniDll(
+            compiler = "cc",
+            buildTask = ":blake3Jni:buildBlake3JniLinuxX64",
+            sourcePath = "build/native/linuxX64/libblake3_jni.so",
+            resourceDir = "linux-x86_64",
+            required = true,
+        ),
+        JniDll(
+            compiler = "aarch64-linux-gnu-gcc",
+            buildTask = ":blake3Jni:buildBlake3JniLinuxArm64",
+            sourcePath = "build/native/linuxArm64/libblake3_jni.so",
+            resourceDir = "linux-aarch64",
+        ),
+        JniDll(
+            compiler = "x86_64-w64-mingw32-gcc",
+            buildTask = ":blake3Jni:buildBlake3JniWindowsX64",
+            sourcePath = "build/native/windowsX64/blake3_jni.dll",
+            resourceDir = "windows-x86_64",
+        ),
+        JniDll(
+            compiler = "aarch64-w64-mingw32-gcc",
+            buildTask = ":blake3Jni:buildBlake3JniWindowsArm64",
+            sourcePath = "build/native/windowsArm64/blake3_jni.dll",
+            resourceDir = "windows-aarch64",
+        ),
+        JniDll(
+            compiler = "cc",
+            buildTask = ":blake3Jni:buildBlake3JniMacosUniversal2",
+            sourcePath = "build/native/macosUniversal2/libblake3_jni.dylib",
+            resourceDir = "macos-universal",
+            availability = { enableMacos },
+            skipReason = "macOS build not available (requires macOS host or osxcross)",
+        ),
+    )
+
+    jniDlls.forEach { dll ->
+        if (dll.availability()) {
+            dependsOn(dll.buildTask)
+            from(blake3Jni.file(dll.sourcePath)) {
+                into("jp/juggler/konaArchive/native/${dll.resourceDir}")
+            }
+        } else {
+            if (dll.required) {
+                throw GradleException("Required compiler '${dll.compiler}' not found on PATH.")
+            }
+            logger.warn("konaCommonTestFatJar: skipping ${dll.resourceDir} (${dll.skipReason})")
+        }
     }
+
     archiveFileName.set("konaCommonTest.jar")
     manifest {
         attributes["Main-Class"] = "jp.juggler.konaResource.test.MainKt"
     }
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
-    from(tasks.named("jvmMainClasses"))
+    // jvmMainClasses の outputs が空のため、実クラスのある compileKotlinJvm の出力を同梱する。
+    from(tasks.named("compileKotlinJvm").map { it.outputs.files })
 
     // 依存ライブラリ(common-jvm, okio, kotlinx-cli, stdlib)を展開して含める。
-    from(configurations.named("jvmRuntimeClasspath").map { classpath ->
-        classpath.files.map { dep ->
-            if (dep.isDirectory) dep else zipTree(dep)
-        }
-    })
-
-    // blake3Jni の DLL をプラットフォーム別パスで同梱する。
-    val blake3Jni = rootProject.project(":blake3Jni")
-    from(blake3Jni.file("build/native/linuxX64/libblake3_jni.so")) {
-        into("jp/juggler/konaArchive/native/linux-x86_64")
-    }
-    from(blake3Jni.file("build/native/linuxArm64/libblake3_jni.so")) {
-        into("jp/juggler/konaArchive/native/linux-aarch64")
-    }
-    from(blake3Jni.file("build/native/windowsX64/blake3_jni.dll")) {
-        into("jp/juggler/konaArchive/native/windows-x86_64")
-    }
-    from(blake3Jni.file("build/native/windowsArm64/blake3_jni.dll")) {
-        into("jp/juggler/konaArchive/native/windows-aarch64")
-    }
-    if (enableMacos) {
-        from(blake3Jni.file("build/native/macosUniversal2/libblake3_jni.dylib")) {
-            into("jp/juggler/konaArchive/native/macos-universal")
-        }
-    }
+    from(
+        configurations.named("jvmRuntimeClasspath").map { classpath ->
+            classpath.files.map { dep ->
+                if (dep.isDirectory) dep else zipTree(dep)
+            }
+        },
+    )
 }
 
 // ネイティブ実行可能バイナリのリンクタスクと、deploy 時の表示名
@@ -137,41 +184,31 @@ data class CliNativeBinary(
 )
 
 val cliNativeBinaries = buildList {
-    add(CliNativeBinary("linuxX64", "linkReleaseExecutableLinuxX64"))
-    add(CliNativeBinary("linuxArm64", "linkReleaseExecutableLinuxArm64"))
-    add(CliNativeBinary("mingwX64", "linkReleaseExecutableMingwX64"))
+    add(CliNativeBinary("linuxX64", "linkDebugExecutableLinuxX64"))
+    add(CliNativeBinary("linuxArm64", "linkDebugExecutableLinuxArm64"))
+    add(CliNativeBinary("mingwX64", "linkDebugExecutableMingwX64"))
     if (enableMacos) {
-        add(CliNativeBinary("macosArm64", "linkReleaseExecutableMacosArm64"))
+        add(CliNativeBinary("macosArm64", "linkDebugExecutableMacosArm64"))
     }
 }
 
 // A(ネイティブバイナリ)と B(FatJar)をルートプロジェクトへコピーする。
-val deploy = tasks.register("deploy") {
+tasks.register("deploy", DeployKonaCommonTestTask::class.java) {
     group = "build"
     description = "Copies the CLI native binaries and FatJar to the root project"
     dependsOn(fatJar)
     cliNativeBinaries.forEach { dependsOn(it.linkTaskName) }
-
-    doLast {
-        copy {
-            from(fatJar.flatMap { it.archiveFile })
-            into(rootProject.layout.projectDirectory)
-            rename { "konaCommonTest.jar" }
-        }
-        cliNativeBinaries.forEach { binary ->
-            val linkTask = tasks.named<KotlinNativeLink>(binary.linkTaskName).get()
-            val output = linkTask.outputFile.get()
-            val binaryFile: File = when (output) {
-                is File -> output
-                else -> (output as org.gradle.api.file.RegularFile).asFile
-            }
-            val extension = binaryFile.extension.takeIf { it.isNotEmpty() && it != "kexe" }
-                ?.let { ".$it" } ?: ""
-            copy {
-                from(binaryFile)
-                into(rootProject.layout.projectDirectory)
-                rename { "konaCommonTest-${binary.displayName}$extension" }
-            }
-        }
-    }
+    destinationDirectory.set(rootProject.layout.projectDirectory)
+    fatJarFile.set(fatJar.flatMap { it.archiveFile })
+    binaryFiles.from(
+        cliNativeBinaries.map { binary ->
+            tasks.named<KotlinNativeLink>(binary.linkTaskName).get().outputFile.get()
+        },
+    )
+    deploySpecs.set(
+        cliNativeBinaries.map { binary ->
+            val binaryFile = tasks.named<KotlinNativeLink>(binary.linkTaskName).get().outputFile.get()
+            DeployBinarySpec(displayName = binary.displayName, fileName = binaryFile.absolutePath)
+        },
+    )
 }

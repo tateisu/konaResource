@@ -1,5 +1,3 @@
-import org.gradle.api.file.DuplicatesStrategy
-
 plugins {
     alias(libs.plugins.kotlinJvm)
     alias(libs.plugins.shadow)
@@ -7,8 +5,8 @@ plugins {
 }
 
 dependencies {
+    implementation(project(":utils"))
     implementation(project(":common"))
-    implementation(libs.kotlinxCli)
     implementation(libs.okio)
 }
 

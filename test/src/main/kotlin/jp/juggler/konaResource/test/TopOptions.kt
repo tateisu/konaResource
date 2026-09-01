@@ -11,7 +11,7 @@ val specTop = buildCommandSpec(
     creator = { TopOptions() },
 ) {
     incrementalOption(
-        desc = "verbose output",
+        desc = "verbose output. to increase level, use -v=<level> or multi time set like as -vvv",
         fullName = "verbose",
         shortName = 'v',
         valueName = "level",

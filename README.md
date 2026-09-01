@@ -90,10 +90,10 @@ into an executable.
 # Build
 ./gradlew build
 
-# tests
+# detekt, kotest for some modules
 ./gradlew check
 
-# Run sample1
+# Run sample1, sample2
 
 # Build and run the sample1 that uses published artifacts
 ./gradlew sample1:runDebugExecutableLinuxX64
@@ -116,6 +116,68 @@ into an executable.
 # Execute benchmark for 'jvm'
 ./gradlew :benchmark:jvmBenchmark
 ```
+
+## Build prerequisites
+
+The project is built and tested on JDK 21 with the C toolchain. The GitHub Actions
+workflows run on `ubuntu-24.04` / `ubuntu-24.04-arm` (with `gcc`, `g++`, `make`
+preinstalled) and install Java 21 via `actions/setup-java`. To reproduce the same
+environment locally on Ubuntu:
+
+```shell
+# JDK 21 (matching the CI)
+sudo apt install openjdk-21-jdk
+
+# C toolchain (gcc, g++, make)
+sudo apt install build-essential
+```
+
+### Cross-compilation prerequisites (Ubuntu)
+
+The `blake3Jni` module builds the JNI shared library with each target's C compiler.
+On a Linux host, install the cross compilers with apt before building the cross-platform
+DLLs (e.g. `:test:deploy` / `:test:konaCommonTestFatJar`).
+
+```shell
+# Linux ARM64: provides aarch64-linux-gnu-gcc
+sudo apt install gcc-aarch64-linux-gnu
+
+# Windows x64: provides x86_64-w64-mingw32-gcc
+sudo apt install gcc-mingw-w64-x86-64
+```
+
+If a required cross compiler is missing, the build fails with a message such as:
+
+```
+Cross compiler 'aarch64-linux-gnu-gcc' for target not found. Install it or exclude the target.
+```
+
+Notes:
+
+- **Windows ARM64** (`aarch64-w64-mingw32-gcc`) is not available as an official Ubuntu package.
+  It must be built manually if you need `buildBlake3JniWindowsArm64`.
+- **macOS** targets cannot be built on a Linux host with the bundled toolchain.
+  Build on a macOS host, or set up [osxcross](https://github.com/osxcross/osxcross)
+  and pass `-Pmacos=true` to the Gradle build.
+- The `common` module's native targets (linuxX64 / linuxArm64 / mingwX64) are cross-compiled
+  by Kotlin/Native itself, so they do not require these external compilers.
+
+### Alpine Linux (musl)
+
+The `blake3-jni-abi-test-linux-x64-musl.yml` workflow runs in an Alpine container and
+installs its dependencies with `apk`:
+
+```shell
+apk add --no-cache openjdk21 bash gcc g++ make nasm linux-headers
+```
+
+This list is specific to the minimal Alpine image. On Ubuntu, only a JDK and `gcc`
+(covered by `build-essential` above) are required; `g++`, `make`, `nasm` and
+`linux-headers` are not used by this project's build, and `bash` is preinstalled.
+
+Note that Kotlin/Native does not support musl environments (see
+[KT-38891](https://youtrack.jetbrains.com/issue/KT-38891)), so musl is only usable for
+the JVM-side build and tests.
 
 ## Using the CLI
 

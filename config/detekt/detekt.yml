@@ -30,3 +30,5 @@ formatting:
   autoCorrect: false
   Filename:
     active: false
+  Indentation:
+    active: false

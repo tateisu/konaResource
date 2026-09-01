@@ -1,21 +1,20 @@
+import jp.juggler.konaResource.buildlogic.macosEnabled
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 plugins {
+    id("jp.juggler.konaResource.buildlogic")
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.ksp)
-    alias(libs.plugins.kotest)
     `maven-publish`
 }
 
 group = "jp.juggler.konaResource"
 version = rootProject.version
 
-// -Pmacos=true を指定したときのみ macosArm64 ターゲットを含める。
-// macOS ターゲットの cinterop は macOS ホストでしか処理できないため、
-// 他ホストでのビルドではターゲットごと除外する。
-val enableMacos: Boolean = (findProperty("macos") as? String)?.toBoolean() == true
+// -Pmacos=true/false の上書きを考慮した macOS ビルドの有効/無効 (build-logic のユーティリティ)。
+val enableMacos: Boolean = macosEnabled()
 
 // warning, PIC options, optimization for this project.
 val nativeCCompilerOptions = listOf("-W", "-Wall", "-O3", "-fPIC")
@@ -102,6 +101,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(libs.okio)
+            implementation(libs.kotlinxCoroutinesCore)
         }
         nativeMain.dependencies {
             implementation(libs.lz4Native)

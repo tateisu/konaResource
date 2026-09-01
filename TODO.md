@@ -1,6 +1,10 @@
 # TODO
 ひとつずつ順に実行して、終わったら `[x]` をつける
 
+# sample1がビルドされない
+  - sample1 は公開済みプラグイン(0.1.4)が config cache 非互換のため一時的に settings.gradle.kts から除外。version を 0.1.5 に更新済み。
+  - 残作業: ユーザが v0.1.5 タグを push → CI が Central 公開 → 公開後に settings.gradle.kts の sample1 を再有効化。
+
 # testモジュールのCLI
 
 - kotlinx-cliを導入
