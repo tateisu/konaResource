@@ -1,10 +1,15 @@
 # TODO
 ひとつずつ順に実行して、終わったら `[x]` をつける
 
-# KonaBuildTarget 利用の拡大
-- [x] 可能な箇所全てで fun KotlinMultiplatformExtension.konaTargets() を使う
-  - needs `import jp.juggler.konaResource.buildlogic.konaTargets`
-  - use `kotlin { konaTargets() ...` instead of many Kotlin/Native targets.
+# benchmarkの単体バイナリ出力 [x]
+- クロスプラットフォーム理由で単体バイナリを出力して、ビルドホスト以外の環境で動くようにしたい
+- test モジュールで既にやったことだが、こちらはデバッグビルドではなくリリースビルドを使う
+- ベンチマーク機構は再発明することになる
+  - 競合製品のソースコードを参考にすること
+  - kotlinx-benchmarkはGradleに重依存しているので使えない。
+- deploy タスクで konaBenchmark なんたらをルートプロジェクトにコピーしてchmod する
+- それらのバイナリはGitHub workflow で使うのでリポジトリに追加する
+  - benchmark:deploy を実行したときだけ更新する
 
 # testモジュールのCLI
 - [x] クロスプラットフォーム理由でtest cli を独立させた
@@ -30,15 +35,7 @@ macOS universal2
 Windows x64
 Windows arm64
 
-# benchmarkの単体バイナリ出力
-- クロスプラットフォーム理由で単体バイナリを出力して、ビルドホスト以外の環境で動くようにしたい
-- test モジュールで既にやったことだが、こちらはデバッグビルドではなくリリースビルドを使う
-- ベンチマーク機構は再発明することになる
-  - 競合製品のソースコードを参考にすること 
-  - kotlinx-benchmarkはGradleに重依存しているので使えない。
-- deploy タスクで konaBenchmark なんたらをルートプロジェクトにコピーしてchmod する
-- それらのバイナリはGitHub workflow で使うのでリポジトリに追加する
-  - benchmark:deploy を実行したときだけ更新する
+
 
 ## test, benchmark をクロスプラットフォーム実行するGithub Action
   - アーキ別に書いてそれぞれ問題がないことを確認し、最後に単一ワークフローにまとめる

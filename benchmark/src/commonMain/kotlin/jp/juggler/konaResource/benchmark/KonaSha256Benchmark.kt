@@ -1,6 +1,7 @@
 package jp.juggler.konaResource.benchmark
 
 import jp.juggler.konaArchive.util.KonaDigest
+import jp.juggler.konaArchive.util.defaultKonaSha256
 import kotlinx.benchmark.Benchmark
 import kotlinx.benchmark.Scope
 import kotlinx.benchmark.Setup
@@ -36,4 +37,4 @@ open class KonaSha256Benchmark {
 
 internal expect fun benchmarkSourceFiles(): List<ByteArray>
 
-internal expect fun defaultSha256(): KonaDigest
+internal fun defaultSha256(): KonaDigest = defaultKonaSha256

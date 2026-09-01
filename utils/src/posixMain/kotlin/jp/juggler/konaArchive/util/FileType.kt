@@ -11,14 +11,14 @@ import platform.posix.S_IFMT
 import platform.posix.S_IFREG
 import platform.posix.stat
 
-internal enum class FileType {
+enum class FileType {
     Directory,
     Regular,
     Other,
 }
 
 @OptIn(ExperimentalForeignApi::class)
-internal fun fileType(path: String): FileType = memScoped {
+fun fileType(path: String): FileType = memScoped {
     val info = alloc<stat>()
     if (stat(path, info.ptr) != 0) {
         throw ErrnoException("Unable to stat file: $path")
@@ -31,10 +31,10 @@ internal fun fileType(path: String): FileType = memScoped {
     }
 }
 
-internal fun fileName(path: String): String =
+fun fileName(path: String): String =
     path.trimEnd('/').substringAfterLast('/')
 
-internal fun joinPath(parent: String, child: String): String = when {
+fun joinPath(parent: String, child: String): String = when {
     parent.isEmpty() -> child
     parent.endsWith('/') -> parent + child
     else -> "$parent/$child"

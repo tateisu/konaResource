@@ -23,7 +23,7 @@ import platform.posix.stat
 
 @OptIn(ExperimentalForeignApi::class)
 @Suppress("MatchingDeclarationName", "MagicNumber")
-internal class FileRandomAccessPosix private constructor(
+class FileRandomAccessPosix private constructor(
     val path: String,
     var fileDescriptor: Int,
     override val isReadOnly: Boolean,

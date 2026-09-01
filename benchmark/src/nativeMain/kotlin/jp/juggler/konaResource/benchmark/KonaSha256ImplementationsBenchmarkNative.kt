@@ -8,7 +8,7 @@ import kotlinx.benchmark.Setup
 import kotlinx.benchmark.State
 
 @State(Scope.Benchmark)
-open class KonaSha256ImplementationsBenchmarkLinux {
+open class KonaSha256ImplementationsBenchmarkNative {
     private lateinit var files: List<ByteArray>
 
     @Setup

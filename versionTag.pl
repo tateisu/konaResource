@@ -38,7 +38,8 @@ for (
     ["(rootProject)" => "properties"],
     ["common" => ":common:properties"],
     ["plugin" => ":plugin:properties"],
-    ["sample1" => ":sample1:properties"],
+    # 公開前に合わせられないのでチェックしない
+    # ["sample1" => ":sample1:properties"],
 ) {
     my($module,$task) = @$_;
     my $version = trim scalar `./gradlew -q $task | grep '^version:' | cut -d' ' -f2-`;
@@ -60,9 +61,8 @@ cmd qq(
     ./gradlew
     build
     check
-    sample1:runDebugExecutableLinuxX64
-    sample1:runReleaseExecutableLinuxX64
 );
+cmd qq(./runSample2.sh);
 
 # 未コミットまたは未追加の変更をチェック
 my @lines = grep{ length $_} map{ trim $_ } `git status --porcelain --untracked-files=all`;

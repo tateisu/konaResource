@@ -151,11 +151,3 @@ if (JniBuildTarget.MacosX64 in availableJniBuildTargets &&
     tasks.assemble { dependsOn(registeredTask) }
     tasks.check { dependsOn(registeredTask) }
 }
-
-// Linux x64 をビルドする
-// 全アーキ対応していない盲腸。まだbenchmarkから参照されている
-val buildBlake3Jni = tasks.register("buildBlake3Jni") {
-    group = "build"
-    description = "Builds the BLAKE3 JNI shared library for the default (Linux x64) target"
-    dependsOn("buildBlake3JniLinuxX64")
-}

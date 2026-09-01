@@ -5,7 +5,7 @@ import kotlinx.cinterop.toKString
 import platform.posix.errno
 import platform.posix.strerror
 
-internal class ErrnoException(
+class ErrnoException(
     message: String? = null,
     @Suppress("unused")
     val errNum: Int = errno,
@@ -22,5 +22,5 @@ internal class ErrnoException(
 }
 
 @OptIn(ExperimentalForeignApi::class)
-internal fun strError(errNum: Int = errno): String =
+fun strError(errNum: Int = errno): String =
     strerror(errNum)?.toKString() ?: "errno=$errNum"

@@ -1,6 +1,7 @@
 package jp.juggler.konaResource.benchmark
 
 import jp.juggler.konaArchive.util.KonaDigest
+import jp.juggler.konaArchive.util.defaultKonaBlake3n256
 import kotlinx.benchmark.Benchmark
 import kotlinx.benchmark.Scope
 import kotlinx.benchmark.Setup
@@ -32,4 +33,4 @@ open class KonaBlake3Benchmark {
         }
 }
 
-internal expect fun defaultBlake3(): KonaDigest
+internal fun defaultBlake3(): KonaDigest = defaultKonaBlake3n256

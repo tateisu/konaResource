@@ -5,7 +5,6 @@ package jp.juggler.konaArchive
 import jp.juggler.konaArchive.util.FileRandomAccessMingw
 import jp.juggler.konaArchive.util.FileType
 import jp.juggler.konaArchive.util.WindowsErrorException
-import jp.juggler.konaArchive.util.fileName
 import jp.juggler.konaArchive.util.fileType
 import jp.juggler.konaArchive.util.joinPath
 import kotlinx.cinterop.ByteVar
@@ -36,44 +35,6 @@ private object KonaArchiveTestUtilsMingw : KonaArchiveTestUtils {
 
     private const val ERROR_ALREADY_EXISTS = 183u
     private const val ERROR_FILE_NOT_FOUND = 2u
-
-    @OptIn(ExperimentalForeignApi::class)
-    fun listDirectory(path: String): List<KonaWriterEntry> = memScoped {
-        val findData = alloc<WIN32_FIND_DATAA>()
-        val searchPath = joinPath(path, "*")
-        val findHandle = FindFirstFileA(searchPath, findData.ptr)
-        if (findHandle == INVALID_HANDLE_VALUE) {
-            throw WindowsErrorException("Unable to open directory: $path")
-        }
-        try {
-            buildList {
-                while (true) {
-                    val name = findData.cFileName.toKString()
-                    if (name != "" && name != "." && name != "..") {
-                        add(joinPath(path, name).toKonaWriterEntry())
-                    }
-                    if (FindNextFileA(findHandle, findData.ptr) == 0) break
-                }
-            }
-        } finally {
-            FindClose(findHandle)
-        }
-    }
-
-    fun String.toKonaWriterEntry(): KonaWriterEntry {
-        val source = this
-        return when (fileType(source)) {
-            FileType.Directory -> KonaWriterDirectory(fileName(source)) {
-                listDirectory(source)
-            }
-
-            FileType.Regular -> KonaWriterFile(fileName(source)) {
-                FileRandomAccessMingw(source, isReadOnly = true)
-            }
-
-            FileType.Other -> error("Unsupported file type: $source")
-        }
-    }
 
     private fun tempBase(): String = memScoped {
         val buffer = allocArray<ByteVar>(1024)

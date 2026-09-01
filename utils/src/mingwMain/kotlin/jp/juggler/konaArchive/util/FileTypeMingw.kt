@@ -7,7 +7,7 @@ import platform.windows.DWORD
 import platform.windows.FILE_ATTRIBUTE_DIRECTORY
 import platform.windows.GetFileAttributesA
 
-internal enum class FileType {
+enum class FileType {
     Directory,
     Regular,
     Other,
@@ -16,7 +16,7 @@ internal enum class FileType {
 private const val INVALID_FILE_ATTRIBUTES: DWORD = 0xFFFF_FFFFu
 
 @OptIn(ExperimentalForeignApi::class)
-internal fun fileType(path: String): FileType {
+fun fileType(path: String): FileType {
     val attributes = GetFileAttributesA(path)
     return when {
         attributes == INVALID_FILE_ATTRIBUTES ->
@@ -27,10 +27,10 @@ internal fun fileType(path: String): FileType {
     }
 }
 
-internal fun fileName(path: String): String =
+fun fileName(path: String): String =
     path.trimEnd('/', '\\').substringAfterLast('\\').substringAfterLast('/')
 
-internal fun joinPath(parent: String, child: String): String = when {
+fun joinPath(parent: String, child: String): String = when {
     parent.isEmpty() -> child
     parent.endsWith('/') || parent.endsWith('\\') -> parent + child
     else -> "$parent/$child"

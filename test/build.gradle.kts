@@ -65,6 +65,7 @@ kotlin {
             }
         }
         nativeMain.dependencies {
+            implementation(project(":utils"))
             implementation(libs.kotestFrameworkEngine)
             implementation(libs.kotestAssertions)
         }
