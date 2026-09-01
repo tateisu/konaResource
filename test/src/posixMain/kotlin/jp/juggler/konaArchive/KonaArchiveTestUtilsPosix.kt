@@ -8,9 +8,9 @@ import jp.juggler.konaArchive.util.fileType
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.pointed
 import kotlinx.cinterop.toKString
-import platform.posix.closedir
 import platform.posix.EEXIST
 import platform.posix.ENOENT
+import platform.posix.closedir
 import platform.posix.errno
 import platform.posix.getpid
 import platform.posix.mkdir
