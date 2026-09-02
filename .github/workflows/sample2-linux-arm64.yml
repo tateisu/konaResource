@@ -19,7 +19,7 @@ jobs:
           distribution: temurin
           java-version: "21"
       - name: Check ARM cross compiler
-        run: aarch64-linux-gnu-gcc --version
+        run: clang --version
       - name: Build sample2
         run: |
           ./gradlew --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx2g publishLocalMaven

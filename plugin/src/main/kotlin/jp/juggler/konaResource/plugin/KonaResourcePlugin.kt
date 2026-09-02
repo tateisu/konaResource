@@ -26,7 +26,7 @@ import java.util.Locale
 import javax.inject.Inject
 
 private fun compilerForTarget(targetName: String): String = when (targetName.lowercase(Locale.ROOT)) {
-    "linuxarm64" -> "aarch64-linux-gnu-gcc"
+    "linuxarm64" -> "clang"
     "mingwx64" -> if (System.getProperty("os.name").lowercase(Locale.ROOT).contains("windows")) {
         "cc"
     } else {
@@ -44,6 +44,7 @@ class KonaResourcePlugin : Plugin<Project> {
         generate.configure { task ->
             task.outputDirectory.set(project.layout.buildDirectory.dir("generated/konaResource"))
             task.compiler.convention("cc")
+            task.compilerArgs.convention(emptyList())
         }
         project.afterEvaluate {
             generate.configure { task ->
@@ -88,6 +89,7 @@ class KonaResourcePlugin : Plugin<Project> {
                     task.lz4blockChecksumFlag.set(extension.lz4blockChecksumFlag)
                     task.lz4AutoFlush.set(extension.lz4AutoFlush)
                     task.lz4FavorDecSpeed.set(extension.lz4FavorDecSpeed)
+                    task.compilerArgs.convention(emptyList())
                 }
 
                 val kotlin = project.extensions.getByType(KotlinMultiplatformExtension::class.java)
@@ -103,6 +105,9 @@ class KonaResourcePlugin : Plugin<Project> {
                             project.layout.buildDirectory.dir("generated/konaResource/${target.name}"),
                         )
                         task.compiler.set(compilerForTarget(target.name))
+                        if (target.name.equals("linuxArm64", ignoreCase = true)) {
+                            task.compilerArgs.set(listOf("--target=aarch64-linux-gnu"))
+                        }
                     }
                     target.binaries.all { binary ->
                         val linkerOptions: Array<String> = extension.modules.map { module ->
@@ -156,6 +161,9 @@ abstract class GenerateKonaResourceTask @Inject constructor(
     @get:Input
     abstract val compiler: Property<String>
 
+    @get:Input
+    abstract val compilerArgs: ListProperty<String>
+
     @get:OutputDirectory
     abstract val outputDirectory: DirectoryProperty
 
@@ -208,6 +216,7 @@ abstract class GenerateKonaResourceTask @Inject constructor(
                     spec.workingDir(output)
                     spec.commandLine(
                         compiler.get(),
+                        *compilerArgs.get().toTypedArray(),
                         "-c",
                         "-x",
                         "assembler-with-cpp",
