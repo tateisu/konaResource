@@ -9,11 +9,11 @@ on:
       runner:
         required: true
         type: string
-      test_task:
+      test_tasks:
         required: false
         default: ""
         type: string
-      benchmark_task:
+      benchmark_tasks:
         required: false
         default: ""
         type: string
@@ -21,6 +21,12 @@ on:
         required: true
         type: string
       sample2_targets:
+        required: true
+        type: string
+      empty_tasks:
+        required: true
+        type: string
+      empty_targets:
         required: true
         type: string
 
@@ -53,24 +59,27 @@ jobs:
       - name: Publish local dependencies
         run: ./gradlew --no-daemon --max-workers=1 publishLocalMaven
 
-      - name: Build test, benchmark, and sample2
+      - name: Build test, benchmark, sample2, and empty
         env:
-          TEST_TASK: ${{ inputs.test_task }}
-          BENCHMARK_TASK: ${{ inputs.benchmark_task }}
+          TEST_TASKS: ${{ inputs.test_tasks }}
+          BENCHMARK_TASKS: ${{ inputs.benchmark_tasks }}
           SAMPLE2_TASKS: ${{ inputs.sample2_tasks }}
+          EMPTY_TASKS: ${{ inputs.empty_tasks }}
         run: |
           tasks=()
-          if [[ -n "$TEST_TASK" ]]; then tasks+=(":test:$TEST_TASK"); fi
-          if [[ -n "$BENCHMARK_TASK" ]]; then tasks+=(":benchmark:$BENCHMARK_TASK"); fi
+          for task in $TEST_TASKS; do tasks+=(":test:$task"); done
+          for task in $BENCHMARK_TASKS; do tasks+=(":benchmark:$task"); done
           for task in $SAMPLE2_TASKS; do tasks+=(":sample2:$task"); done
+          for task in $EMPTY_TASKS; do tasks+=(":empty:$task"); done
           ./gradlew --no-daemon --max-workers=1 "${tasks[@]}"
 
       - name: Collect build results
         env:
           HOST: ${{ inputs.host }}
-          TEST_TASK: ${{ inputs.test_task }}
-          BENCHMARK_TASK: ${{ inputs.benchmark_task }}
+          TEST_TASKS: ${{ inputs.test_tasks }}
+          BENCHMARK_TASKS: ${{ inputs.benchmark_tasks }}
           SAMPLE2_TARGETS: ${{ inputs.sample2_targets }}
+          EMPTY_TARGETS: ${{ inputs.empty_targets }}
         run: |
           lower_first() {
             local value="$1"
@@ -92,21 +101,28 @@ jobs:
             fi
           }
           result_dir="workflowResult/$HOST"
-          mkdir -p "$result_dir/test" "$result_dir/benchmark" "$result_dir/sample2"
-          if [[ -n "$TEST_TASK" ]]; then
-            test_target="${TEST_TASK#linkDebugExecutable}"
+          mkdir -p "$result_dir/test" "$result_dir/benchmark" "$result_dir/sample2" "$result_dir/empty"
+          for task in $TEST_TASKS; do
+            test_target="${task#linkDebugExecutable}"
             test_target="$(lower_first "$test_target")"
-            copy_executable "test/build/bin/$test_target/debugExecutable" konaCommonTest "$result_dir/test"
-          fi
-          if [[ -n "$BENCHMARK_TASK" ]]; then
-            benchmark_target="${BENCHMARK_TASK#linkReleaseExecutable}"
+            mkdir -p "$result_dir/test/$test_target"
+            copy_executable "test/build/bin/$test_target/debugExecutable" konaCommonTest "$result_dir/test/$test_target"
+          done
+          for task in $BENCHMARK_TASKS; do
+            benchmark_target="${task#linkReleaseExecutable}"
             benchmark_target="$(lower_first "$benchmark_target")"
-            copy_executable "benchmark/build/bin/$benchmark_target/releaseExecutable" konaBenchmark "$result_dir/benchmark"
-          fi
+            mkdir -p "$result_dir/benchmark/$benchmark_target"
+            copy_executable "benchmark/build/bin/$benchmark_target/releaseExecutable" konaBenchmark "$result_dir/benchmark/$benchmark_target"
+          done
           for target in $SAMPLE2_TARGETS; do
             target_dir="$(lower_first "$target")"
             mkdir -p "$result_dir/sample2/$target"
             copy_executable "sample2/build/bin/$target_dir/debugExecutable" sample2 "$result_dir/sample2/$target"
+          done
+          for target in $EMPTY_TARGETS; do
+            target_dir="$(lower_first "$target")"
+            mkdir -p "$result_dir/empty/$target"
+            copy_executable "empty/build/bin/$target_dir/debugExecutable" empty "$result_dir/empty/$target"
           done
 
       - name: Upload build results

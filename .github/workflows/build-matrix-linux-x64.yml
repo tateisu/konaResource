@@ -12,7 +12,9 @@ jobs:
     with:
       host: LinuxX64
       runner: ubuntu-24.04
-      test_task: linkDebugExecutableLinuxX64
-      benchmark_task: linkReleaseExecutableLinuxX64
+      test_tasks: linkDebugExecutableLinuxX64 linkDebugExecutableLinuxArm64 linkDebugExecutableMingwX64
+      benchmark_tasks: linkReleaseExecutableLinuxX64 linkReleaseExecutableLinuxArm64 linkReleaseExecutableMingwX64
       sample2_tasks: linkDebugExecutableLinuxX64 linkDebugExecutableLinuxArm64 linkDebugExecutableMingwX64
       sample2_targets: LinuxX64 LinuxArm64 MingwX64
+      empty_tasks: linkDebugExecutableLinuxX64 linkDebugExecutableLinuxArm64 linkDebugExecutableMingwX64
+      empty_targets: LinuxX64 LinuxArm64 MingwX64

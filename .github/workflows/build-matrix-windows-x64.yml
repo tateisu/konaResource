@@ -12,7 +12,9 @@ jobs:
     with:
       host: WindowsX64
       runner: windows-2025
-      test_task: linkDebugExecutableMingwX64
-      benchmark_task: linkReleaseExecutableMingwX64
+      test_tasks: linkDebugExecutableLinuxX64 linkDebugExecutableLinuxArm64 linkDebugExecutableMingwX64
+      benchmark_tasks: linkReleaseExecutableLinuxX64 linkReleaseExecutableLinuxArm64 linkReleaseExecutableMingwX64
       sample2_tasks: linkDebugExecutableMingwX64
       sample2_targets: MingwX64
+      empty_tasks: linkDebugExecutableMingwX64
+      empty_targets: MingwX64
