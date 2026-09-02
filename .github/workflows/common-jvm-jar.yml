@@ -1,0 +1,148 @@
+name: common-jvm jar - JNI targets
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  common-jvm-jar:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x64
+            host: LinuxX64
+            runner: ubuntu-24.04
+            expected-targets: "LinuxX64 LinuxArm64 WindowsX64"
+            expected-resources: "linux-x86_64 linux-aarch64 windows-x86_64"
+          - name: macOS x64
+            host: MacosX64
+            runner: macos-15-intel
+            expected-targets: "MacosX64 MacosArm64"
+            expected-resources: "macos-universal"
+          - name: macOS arm64
+            host: MacosArm64
+            runner: macos-15
+            expected-targets: "MacosX64 MacosArm64"
+            expected-resources: "macos-universal"
+          - name: Windows x64
+            host: WindowsX64
+            runner: windows-2025
+            expected-targets: "WindowsX64"
+            expected-resources: "windows-x86_64"
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Set up Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install Linux cross compilers
+        if: matrix.host == 'LinuxX64'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes gcc-aarch64-linux-gnu gcc-mingw-w64-x86-64 unzip
+
+      - name: Download Linux arm64 JDK headers
+        if: matrix.host == 'LinuxX64'
+        run: |
+          mkdir -p jdk/LinuxArm64
+          curl --fail --location --silent --show-error \
+            https://aka.ms/download-jdk/microsoft-jdk-21.0.12.1-linux-aarch64.tar.gz \
+            --output /tmp/microsoft-jdk-linux-aarch64.tar.gz
+          tar --extract --gzip --file /tmp/microsoft-jdk-linux-aarch64.tar.gz \
+            --strip-components=1 --wildcards '*/include/*' --directory jdk/LinuxArm64
+
+      - name: Download Windows x64 JDK headers
+        if: matrix.host == 'LinuxX64'
+        run: |
+          mkdir -p jdk/WindowsX64
+          curl --fail --location --silent --show-error \
+            https://aka.ms/download-jdk/microsoft-jdk-21.0.12.1-windows-x64.zip \
+            --output /tmp/microsoft-jdk-windows-x64.zip
+          unzip --quiet /tmp/microsoft-jdk-windows-x64.zip -d /tmp/microsoft-jdk-windows-x64
+          cp -R /tmp/microsoft-jdk-windows-x64/*/include jdk/WindowsX64/
+
+      - name: Download macOS arm64 JDK headers
+        if: matrix.host == 'MacosX64'
+        run: |
+          mkdir -p jdk/MacosArm64
+          curl --fail --location --silent --show-error \
+            https://aka.ms/download-jdk/microsoft-jdk-21.0.12.1-macos-aarch64.tar.gz \
+            --output /tmp/microsoft-jdk-macos-aarch64.tar.gz
+          gtar --extract --gzip --file /tmp/microsoft-jdk-macos-aarch64.tar.gz \
+            --strip-components=1 --wildcards '*/include/*' --directory jdk/MacosArm64
+
+      - name: Download macOS x64 JDK headers
+        if: matrix.host == 'MacosArm64'
+        run: |
+          mkdir -p jdk/MacosX64
+          curl --fail --location --silent --show-error \
+            https://aka.ms/download-jdk/microsoft-jdk-21.0.12.1-macos-x64.tar.gz \
+            --output /tmp/microsoft-jdk-macos-x64.tar.gz
+          gtar --extract --gzip --file /tmp/microsoft-jdk-macos-x64.tar.gz \
+            --strip-components=1 --wildcards '*/include/*' --directory jdk/MacosX64
+
+      - name: Build common-jvm jar
+        run: ./gradlew --no-daemon --max-workers=1 :common:jvmJar
+
+      - name: Verify expected JNI targets
+        run: |
+          common_jar=""
+          for candidate in common/build/libs/common-jvm-*.jar; do
+            case "$candidate" in
+              *-sources.jar|*-javadoc.jar) continue ;;
+            esac
+            if [[ -z "$common_jar" || "$candidate" -nt "$common_jar" ]]; then
+              common_jar="$candidate"
+            fi
+          done
+          test -n "$common_jar"
+          echo "Expected JniBuildTarget: ${{ matrix.expected-targets }}"
+          jar_contents="$(jar tf "$common_jar")"
+          for resource in ${{ matrix.expected-resources }}; do
+            case "$resource" in
+              macos-universal)
+                resource_path="jp/juggler/konaArchive/native/macos-universal/"
+                ;;
+              *)
+                resource_path="jp/juggler/konaArchive/native/$resource/"
+                ;;
+            esac
+            printf '%s\n' "$jar_contents" | rg -q "^${resource_path}" || {
+              echo "Missing JNI resource: $resource_path" >&2
+              exit 1
+            }
+          done
+
+      - name: Copy common.jar
+        run: |
+          mkdir -p workflowResult/${{ matrix.host }}
+          common_jar=""
+          for candidate in common/build/libs/common-jvm-*.jar; do
+            case "$candidate" in
+              *-sources.jar|*-javadoc.jar) continue ;;
+            esac
+            if [[ -z "$common_jar" || "$candidate" -nt "$common_jar" ]]; then
+              common_jar="$candidate"
+            fi
+          done
+          test -n "$common_jar"
+          cp "$common_jar" workflowResult/${{ matrix.host }}/common.jar
+
+      - name: Upload common.jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: common-jar-${{ matrix.host }}
+          path: workflowResult/${{ matrix.host }}/common.jar
+          if-no-files-found: error
