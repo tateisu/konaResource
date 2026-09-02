@@ -7,6 +7,7 @@
 - Re-enabled `sample1` with the published `0.1.6` plugin and common library after the config cache compatibility fix.
 - Documented the Kotlin/Native resource embedding pipeline in the README.
 - Added `KonaBuildHost` to centralize Kotlin/Native build-host detection.
+- Added host/target-specific Gradle property overrides for JNI compiler and options.
 
 ## v0.1.6
 - `KonaArchive` data schema version 2. digest hash is changed from SHA-256 to BLAKE3-256.

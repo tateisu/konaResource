@@ -41,6 +41,15 @@ enum class JniBuildTarget(
      * PATH 上にクロスコンパイラが存在するか確認する。
      */
     private fun isCompilerAvailable(compiler: String): Boolean {
+        val compilerFile = File(compiler)
+        if (compiler.contains('/') || compiler.contains('\\')) {
+            val candidates = if (getKonaBuildHost().isWindows && compilerFile.extension.isEmpty()) {
+                listOf(compilerFile, File("$compiler.exe"))
+            } else {
+                listOf(compilerFile)
+            }
+            return candidates.any(File::canExecute)
+        }
         val pathEntries = System.getenv("PATH")?.split(File.pathSeparator) ?: return false
         val compilerNames = when {
             getKonaBuildHost().isWindows -> listOf(compiler, "$compiler.exe")
@@ -59,12 +68,18 @@ enum class JniBuildTarget(
     }
 
     /**
+     * Returns the compiler after applying the host/target-specific Gradle property override.
+     */
+    fun compilerForHost(project: Project): String =
+        project.jniBuildProperty(this, "compiler") ?: compilerForHost()
+
+    /**
      * このホストでJNIをビルドできるなら真
      */
-    internal fun isAvailable(rootProjectDirectory: File): Boolean =
+    internal fun isAvailable(project: Project): Boolean =
         (!isMacos || macosBuildAvailable()) &&
-            isCompilerAvailable(compilerForHost()) &&
-            File(javaHome(rootProjectDirectory), "include/jni.h").isFile
+            isCompilerAvailable(compilerForHost(project)) &&
+            File(javaHome(project.rootProject.projectDir), "include/jni.h").isFile
 
     /**
      * ルートプロジェクトに配置したターゲット固有の JDK のパスを返す。
@@ -104,6 +119,31 @@ private var cacheAvailableList: List<JniBuildTarget>? = null
 fun Project.availableJniBuildTargets(): List<JniBuildTarget> =
     cacheAvailableList ?: run {
         JniBuildTarget.entries.filter {
-            it.isAvailable(rootProject.projectDir)
+            it.isAvailable(this)
         }
     }.also { cacheAvailableList = it }
+
+/**
+ * Returns a host/target-specific JNI build property.
+ *
+ * The property name is `${host}_${target}_${suffix}`, for example
+ * `LinuxX64_WindowsArm64_compiler`.
+ */
+fun Project.jniBuildProperty(target: JniBuildTarget, suffix: String): String? {
+    val propertyName = "${getKonaBuildHost().name}_${target.name}_$suffix"
+    return providers.gradleProperty(propertyName).orNull
+        ?: findProperty(propertyName)?.toString()
+}
+
+/**
+ * Returns comma-separated host/target-specific options, or [default] when not overridden.
+ */
+fun Project.jniBuildOptions(
+    target: JniBuildTarget,
+    suffix: String,
+    default: List<String>,
+): List<String> = jniBuildProperty(target, suffix)
+    ?.split(',')
+    ?.map(String::trim)
+    ?.filter(String::isNotEmpty)
+    ?: default

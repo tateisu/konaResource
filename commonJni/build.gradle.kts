@@ -2,6 +2,8 @@ import jp.juggler.konaResource.buildlogic.CommonJniBuildTask
 import jp.juggler.konaResource.buildlogic.CommonJniBuildUnit
 import jp.juggler.konaResource.buildlogic.JniBuildTarget
 import jp.juggler.konaResource.buildlogic.availableJniBuildTargets
+import jp.juggler.konaResource.buildlogic.jniBuildProperty
+import jp.juggler.konaResource.buildlogic.jniBuildOptions
 
 plugins {
     base
@@ -41,9 +43,17 @@ fun JniBuildTarget.registerJniBuild(
     return tasks.register(taskName, CommonJniBuildTask::class.java) {
         group = "build"
         description = "Builds the BLAKE3 JNI shared library for $buildName"
-        this.compiler.set(this@registerJniBuild.compilerForHost())
-        this.linkFlags.set(linkFlags)
-        buildUnits.set(listOf(CommonJniBuildUnit(arch = arch, sources = sources, cflags = cflags)))
+        this.compiler.set(this@registerJniBuild.compilerForHost(project))
+        this.linkFlags.set(project.jniBuildOptions(this@registerJniBuild, "linkOpt", linkFlags))
+        buildUnits.set(
+            listOf(
+                CommonJniBuildUnit(
+                    arch = arch,
+                    sources = sources,
+                    cflags = project.jniBuildOptions(this@registerJniBuild, "compileOpt", cflags),
+                ),
+            ),
+        )
         includeDirs.setFrom(
             sourceDirectory,
             blake3SourceDirectory,
@@ -117,19 +127,31 @@ if (JniBuildTarget.MacosX64 in availableJniBuildTargets &&
     val registeredTask = tasks.register("buildBlake3JniMacosUniversal2", CommonJniBuildTask::class.java) {
         group = "build"
         description = "Builds the BLAKE3 JNI shared library for macOS universal2 (x86_64 + arm64)"
-        compiler.set("cc")
-        linkFlags.set(listOf("-shared"))
+        compiler.set(
+            project.jniBuildProperty(JniBuildTarget.MacosX64, "compiler")
+                ?: project.jniBuildProperty(JniBuildTarget.MacosArm64, "compiler")
+                ?: "cc",
+        )
+        linkFlags.set(project.jniBuildOptions(JniBuildTarget.MacosX64, "linkOpt", listOf("-shared")))
         buildUnits.set(
             listOf(
                 CommonJniBuildUnit(
                     arch = "x86_64",
                     sources = commonSources + x86AsmSources,
-                    cflags = listOf("-Wall", "-Wextra", "-O3", "-fPIC", "-mavx", "-mavx2", "-mavx512f", "-mavx512vl"),
+                    cflags = project.jniBuildOptions(
+                        JniBuildTarget.MacosX64,
+                        "compileOpt",
+                        listOf("-Wall", "-Wextra", "-O3", "-fPIC", "-mavx", "-mavx2", "-mavx512f", "-mavx512vl"),
+                    ),
                 ),
                 CommonJniBuildUnit(
                     arch = "arm64",
                     sources = commonSources + neonSource,
-                    cflags = listOf("-Wall", "-Wextra", "-O3", "-fPIC", "-DBLAKE3_USE_NEON=1"),
+                    cflags = project.jniBuildOptions(
+                        JniBuildTarget.MacosArm64,
+                        "compileOpt",
+                        listOf("-Wall", "-Wextra", "-O3", "-fPIC", "-DBLAKE3_USE_NEON=1"),
+                    ),
                 ),
             ),
         )
