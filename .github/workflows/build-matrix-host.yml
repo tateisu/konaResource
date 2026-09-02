@@ -50,28 +50,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes clang gcc-aarch64-linux-gnu gcc-mingw-w64-x86-64
 
-      - name: Download macOS x64 JDK headers on macOS arm64
-        if: inputs.host == 'MacosArm64'
-        run: |
-          mkdir -p jdk/MacosX64 /tmp/microsoft-jdk-macos-x64
-          curl --fail --location --silent --show-error \
-            https://aka.ms/download-jdk/microsoft-jdk-21.0.12.1-macos-x64.tar.gz \
-            --output /tmp/microsoft-jdk-macos-x64.tar.gz
-          tar --extract --gzip --file /tmp/microsoft-jdk-macos-x64.tar.gz \
-            --directory /tmp/microsoft-jdk-macos-x64
-          cp -R /tmp/microsoft-jdk-macos-x64/jdk-*/Contents/Home/include jdk/MacosX64/
-
-      - name: Download macOS arm64 JDK headers on macOS x64
-        if: inputs.host == 'MacosX64'
-        run: |
-          mkdir -p jdk/MacosArm64 /tmp/microsoft-jdk-macos-aarch64
-          curl --fail --location --silent --show-error \
-            https://aka.ms/download-jdk/microsoft-jdk-21.0.12.1-macos-aarch64.tar.gz \
-            --output /tmp/microsoft-jdk-macos-aarch64.tar.gz
-          tar --extract --gzip --file /tmp/microsoft-jdk-macos-aarch64.tar.gz \
-            --directory /tmp/microsoft-jdk-macos-aarch64
-          cp -R /tmp/microsoft-jdk-macos-aarch64/jdk-*/Contents/Home/include jdk/MacosArm64/
-
       - name: Publish local dependencies
         run: ./gradlew --no-daemon --max-workers=1 publishLocalMaven
 
@@ -100,22 +78,35 @@ jobs:
             first="$(printf '%s' "$first" | tr '[:upper:]' '[:lower:]')"
             printf '%s%s' "$first" "${value:1}"
           }
+          copy_executable() {
+            local source_dir="$1"
+            local executable_name="$2"
+            local destination_dir="$3"
+            if [[ -f "$source_dir/$executable_name.kexe" ]]; then
+              cp "$source_dir/$executable_name.kexe" "$destination_dir/"
+            elif [[ -f "$source_dir/$executable_name.exe" ]]; then
+              cp "$source_dir/$executable_name.exe" "$destination_dir/"
+            else
+              printf 'Executable not found: %s/%s.{kexe,exe}\n' "$source_dir" "$executable_name" >&2
+              return 1
+            fi
+          }
           result_dir="workflowResult/$HOST"
           mkdir -p "$result_dir/test" "$result_dir/benchmark" "$result_dir/sample2"
           if [[ -n "$TEST_TASK" ]]; then
             test_target="${TEST_TASK#linkDebugExecutable}"
             test_target="$(lower_first "$test_target")"
-            cp test/build/bin/"$test_target"/debugExecutable/konaCommonTest* "$result_dir/test/"
+            copy_executable "test/build/bin/$test_target/debugExecutable" konaCommonTest "$result_dir/test"
           fi
           if [[ -n "$BENCHMARK_TASK" ]]; then
             benchmark_target="${BENCHMARK_TASK#linkReleaseExecutable}"
             benchmark_target="$(lower_first "$benchmark_target")"
-            cp benchmark/build/bin/"$benchmark_target"/releaseExecutable/konaBenchmark* "$result_dir/benchmark/"
+            copy_executable "benchmark/build/bin/$benchmark_target/releaseExecutable" konaBenchmark "$result_dir/benchmark"
           fi
           for target in $SAMPLE2_TARGETS; do
             target_dir="$(lower_first "$target")"
             mkdir -p "$result_dir/sample2/$target"
-            cp sample2/build/bin/"$target_dir"/debugExecutable/sample2* "$result_dir/sample2/$target/"
+            copy_executable "sample2/build/bin/$target_dir/debugExecutable" sample2 "$result_dir/sample2/$target"
           done
 
       - name: Upload build results
