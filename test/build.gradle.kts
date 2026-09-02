@@ -1,5 +1,6 @@
 import jp.juggler.konaResource.buildlogic.DeployBinarySpec
 import jp.juggler.konaResource.buildlogic.DeployKonaCommonTestTask
+import jp.juggler.konaResource.buildlogic.KonaBuildHost
 import jp.juggler.konaResource.buildlogic.availableKonaBuildTarget
 import jp.juggler.konaResource.buildlogic.getKonaBuildHost
 import jp.juggler.konaResource.buildlogic.konaTargets
@@ -21,7 +22,13 @@ version = rootProject.version
 
 val availableKonaBuildTargets = availableKonaBuildTarget()
 
-val hostArch: String by lazy { getKonaBuildHost().targetName }
+val hostTargetName: String? = when (getKonaBuildHost()) {
+    KonaBuildHost.LinuxX64 -> "linuxX64"
+    KonaBuildHost.MacosArm64 -> "macosArm64"
+    KonaBuildHost.MacosX64 -> null
+    KonaBuildHost.WindowsX64 -> "mingwX64"
+}
+val hostTarget = availableKonaBuildTargets.firstOrNull { it.targetName == hostTargetName }
 
 kotlin {
     konaTargets()
@@ -80,14 +87,22 @@ kotlin {
 tasks.register("runDebug") {
     group = "run"
     description = "Runs the test CLI for the host architecture."
-    dependsOn("runDebugExecutable$hostArch")
+    if (hostTarget == null) {
+        doLast {
+            error("Kotlin/Native target for host is unavailable: ${getKonaBuildHost()}")
+        }
+    } else {
+        dependsOn("runDebugExecutable${hostTarget.targetName.replaceFirstChar { it.uppercase() }}")
+    }
 }
 
-tasks.named<Exec>("runDebugExecutable$hostArch") {
-    providers.gradleProperty("args").orNull
-        ?.trim()
-        ?.takeIf { it.isNotEmpty() }
-        ?.let { arguments -> args(arguments.split(Regex("\\s+"))) }
+hostTarget?.let { target ->
+    tasks.named<Exec>("runDebugExecutable${target.targetName.replaceFirstChar { it.uppercase() }}") {
+        providers.gradleProperty("args").orNull
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?.let { arguments -> args(arguments.split(Regex("\\s+"))) }
+    }
 }
 
 gradle.projectsEvaluated {
