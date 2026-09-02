@@ -42,7 +42,12 @@ enum class JniBuildTarget(
      */
     private fun isCompilerAvailable(compiler: String): Boolean {
         val pathEntries = System.getenv("PATH")?.split(File.pathSeparator) ?: return false
-        return pathEntries.any { dir -> File(dir, compiler).canExecute() }
+        val compilerNames = if (System.getProperty("os.name").lowercase().contains("windows")) {
+            listOf(compiler, "$compiler.exe")
+        } else {
+            listOf(compiler)
+        }
+        return pathEntries.any { dir -> compilerNames.any { File(dir, it).canExecute() } }
     }
 
     /**
