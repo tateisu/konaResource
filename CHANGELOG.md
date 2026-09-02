@@ -11,6 +11,7 @@
 - `commonJni` can supplement unavailable JNI libraries from result Jars, while missing optional libraries do not fail the build.
 - Published `common-jvm` artifacts can include JNI libraries for all available target platforms.
 - Renamed the bundled common JNI libraries to `kona_common_jni`.
+- Fixed Kotlin/Native resource embedding for macOS Mach-O targets.
 
 ## v0.1.6
 - `KonaArchive` data schema version 2. digest hash is changed from SHA-256 to BLAKE3-256.

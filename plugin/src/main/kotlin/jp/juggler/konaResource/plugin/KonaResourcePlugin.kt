@@ -197,13 +197,19 @@ abstract class GenerateKonaResourceTask @Inject constructor(
             val symbol = "konaResource_$safeName"
             assembly.writeText(
                 """
+                    #if defined(__APPLE__)
+                    #define KONA_RESOURCE_SYMBOL(name) _##name
+                    .section __TEXT,__const
+                    #else
+                    #define KONA_RESOURCE_SYMBOL(name) name
                     .section .rodata
+                    #endif
                     .balign 8
-                    .global ${symbol}_start
-                    ${symbol}_start:
+                    .globl KONA_RESOURCE_SYMBOL(${symbol}_start)
+                    KONA_RESOURCE_SYMBOL(${symbol}_start):
                     .incbin "${archiveFile.name}"
-                    .global ${symbol}_end
-                    ${symbol}_end:
+                    .globl KONA_RESOURCE_SYMBOL(${symbol}_end)
+                    KONA_RESOURCE_SYMBOL(${symbol}_end):
                     #if defined(_WIN32)
                     .section .drectve
                     .ascii " -export:${symbol}_start -export:${symbol}_end"
