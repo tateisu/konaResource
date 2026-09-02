@@ -12,43 +12,21 @@ jobs:
     with:
       host: LinuxX64
       runner: ubuntu-24.04
-      test_tasks: linkDebugExecutableLinuxX64 linkDebugExecutableLinuxArm64 linkDebugExecutableMingwX64
-      benchmark_tasks: linkReleaseExecutableLinuxX64 linkReleaseExecutableLinuxArm64 linkReleaseExecutableMingwX64
-      sample2_tasks: linkDebugExecutableLinuxX64 linkDebugExecutableLinuxArm64 linkDebugExecutableMingwX64
-      sample2_targets: LinuxX64 LinuxArm64 MingwX64
-      empty_tasks: linkDebugExecutableLinuxX64 linkDebugExecutableLinuxArm64 linkDebugExecutableMingwX64
-      empty_targets: LinuxX64 LinuxArm64 MingwX64
 
   macos-arm64:
     uses: ./.github/workflows/build-matrix-host.yml
     with:
       host: MacosArm64
       runner: macos-15
-      test_tasks: linkDebugExecutableMacosArm64 linkDebugExecutableLinuxX64 linkDebugExecutableLinuxArm64 linkDebugExecutableMingwX64
-      benchmark_tasks: linkReleaseExecutableMacosArm64 linkReleaseExecutableLinuxX64 linkReleaseExecutableLinuxArm64 linkReleaseExecutableMingwX64
-      sample2_tasks: linkDebugExecutableMacosArm64 linkDebugExecutableLinuxX64 linkDebugExecutableLinuxArm64 linkDebugExecutableMingwX64
-      sample2_targets: MacosArm64 LinuxX64 LinuxArm64 MingwX64
-      empty_tasks: linkDebugExecutableMacosArm64 linkDebugExecutableLinuxX64 linkDebugExecutableLinuxArm64 linkDebugExecutableMingwX64
-      empty_targets: MacosArm64 LinuxX64 LinuxArm64 MingwX64
 
   macos-x64:
     uses: ./.github/workflows/build-matrix-host.yml
     with:
       host: MacosX64
       runner: macos-15-intel
-      sample2_tasks: linkDebugExecutableLinuxX64 linkDebugExecutableLinuxArm64 linkDebugExecutableMingwX64 linkDebugExecutableMacosArm64
-      sample2_targets: LinuxX64 LinuxArm64 MingwX64 MacosArm64
-      empty_tasks: linkDebugExecutableLinuxX64 linkDebugExecutableLinuxArm64 linkDebugExecutableMingwX64 linkDebugExecutableMacosArm64
-      empty_targets: LinuxX64 LinuxArm64 MingwX64 MacosArm64
 
   windows-x64:
     uses: ./.github/workflows/build-matrix-host.yml
     with:
       host: WindowsX64
       runner: windows-2025
-      test_tasks: linkDebugExecutableLinuxX64 linkDebugExecutableLinuxArm64 linkDebugExecutableMingwX64
-      benchmark_tasks: linkReleaseExecutableLinuxX64 linkReleaseExecutableLinuxArm64 linkReleaseExecutableMingwX64
-      sample2_tasks: linkDebugExecutableMingwX64
-      sample2_targets: MingwX64
-      empty_tasks: linkDebugExecutableMingwX64
-      empty_targets: MingwX64

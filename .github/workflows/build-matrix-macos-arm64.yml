@@ -12,9 +12,3 @@ jobs:
     with:
       host: MacosArm64
       runner: macos-15
-      test_tasks: linkDebugExecutableMacosArm64 linkDebugExecutableLinuxX64 linkDebugExecutableLinuxArm64 linkDebugExecutableMingwX64
-      benchmark_tasks: linkReleaseExecutableMacosArm64 linkReleaseExecutableLinuxX64 linkReleaseExecutableLinuxArm64 linkReleaseExecutableMingwX64
-      sample2_tasks: linkDebugExecutableMacosArm64 linkDebugExecutableLinuxX64 linkDebugExecutableLinuxArm64 linkDebugExecutableMingwX64
-      sample2_targets: MacosArm64 LinuxX64 LinuxArm64 MingwX64
-      empty_tasks: linkDebugExecutableMacosArm64 linkDebugExecutableLinuxX64 linkDebugExecutableLinuxArm64 linkDebugExecutableMingwX64
-      empty_targets: MacosArm64 LinuxX64 LinuxArm64 MingwX64

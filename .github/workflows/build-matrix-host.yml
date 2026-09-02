@@ -9,27 +9,6 @@ on:
       runner:
         required: true
         type: string
-      test_tasks:
-        required: false
-        default: ""
-        type: string
-      benchmark_tasks:
-        required: false
-        default: ""
-        type: string
-      sample2_tasks:
-        required: true
-        type: string
-      sample2_targets:
-        required: true
-        type: string
-      empty_tasks:
-        required: true
-        type: string
-      empty_targets:
-        required: true
-        type: string
-
 permissions:
   contents: read
 
@@ -59,71 +38,42 @@ jobs:
       - name: Publish local dependencies
         run: ./gradlew --no-daemon --max-workers=1 publishLocalMaven
 
-      - name: Build test, benchmark, sample2, and empty
-        env:
-          TEST_TASKS: ${{ inputs.test_tasks }}
-          BENCHMARK_TASKS: ${{ inputs.benchmark_tasks }}
-          SAMPLE2_TASKS: ${{ inputs.sample2_tasks }}
-          EMPTY_TASKS: ${{ inputs.empty_tasks }}
-        run: |
-          tasks=()
-          for task in $TEST_TASKS; do tasks+=(":test:$task"); done
-          for task in $BENCHMARK_TASKS; do tasks+=(":benchmark:$task"); done
-          for task in $SAMPLE2_TASKS; do tasks+=(":sample2:$task"); done
-          for task in $EMPTY_TASKS; do tasks+=(":empty:$task"); done
-          ./gradlew --no-daemon --max-workers=1 "${tasks[@]}"
+      - name: Build all
+        run: ./gradlew --no-daemon --max-workers=1 build
 
       - name: Collect build results
         env:
           HOST: ${{ inputs.host }}
-          TEST_TASKS: ${{ inputs.test_tasks }}
-          BENCHMARK_TASKS: ${{ inputs.benchmark_tasks }}
-          SAMPLE2_TARGETS: ${{ inputs.sample2_targets }}
-          EMPTY_TARGETS: ${{ inputs.empty_targets }}
         run: |
-          lower_first() {
-            local value="$1"
-            local first="${value:0:1}"
-            first="$(printf '%s' "$first" | tr '[:upper:]' '[:lower:]')"
-            printf '%s%s' "$first" "${value:1}"
-          }
-          copy_executable() {
-            local source_dir="$1"
-            local executable_name="$2"
-            local destination_dir="$3"
-            if [[ -f "$source_dir/$executable_name.kexe" ]]; then
-              cp "$source_dir/$executable_name.kexe" "$destination_dir/"
-            elif [[ -f "$source_dir/$executable_name.exe" ]]; then
-              cp "$source_dir/$executable_name.exe" "$destination_dir/"
-            else
-              printf 'Executable not found: %s/%s.{kexe,exe}\n' "$source_dir" "$executable_name" >&2
+          copy_executables() {
+            local module="$1"
+            local configuration="$2"
+            local executable_name="$3"
+            local category="$4"
+            local count=0
+            local binary
+            shopt -s nullglob
+            for binary in \
+              "$module/build/bin"/*/"$configuration"/"$executable_name.kexe" \
+              "$module/build/bin"/*/"$configuration"/"$executable_name.exe"; do
+              local target_dir
+              target_dir="$(basename "$(dirname "$(dirname "$binary")")")"
+              mkdir -p "$result_dir/$category/$target_dir"
+              cp "$binary" "$result_dir/$category/$target_dir/"
+              count=$((count + 1))
+            done
+            shopt -u nullglob
+            if [[ "$count" -eq 0 ]]; then
+              printf 'No executable found: %s/%s/%s.{kexe,exe}\n' "$module" "$configuration" "$executable_name" >&2
               return 1
             fi
           }
           result_dir="workflowResult/$HOST"
           mkdir -p "$result_dir/test" "$result_dir/benchmark" "$result_dir/sample2" "$result_dir/empty"
-          for task in $TEST_TASKS; do
-            test_target="${task#linkDebugExecutable}"
-            test_target="$(lower_first "$test_target")"
-            mkdir -p "$result_dir/test/$test_target"
-            copy_executable "test/build/bin/$test_target/debugExecutable" konaCommonTest "$result_dir/test/$test_target"
-          done
-          for task in $BENCHMARK_TASKS; do
-            benchmark_target="${task#linkReleaseExecutable}"
-            benchmark_target="$(lower_first "$benchmark_target")"
-            mkdir -p "$result_dir/benchmark/$benchmark_target"
-            copy_executable "benchmark/build/bin/$benchmark_target/releaseExecutable" konaBenchmark "$result_dir/benchmark/$benchmark_target"
-          done
-          for target in $SAMPLE2_TARGETS; do
-            target_dir="$(lower_first "$target")"
-            mkdir -p "$result_dir/sample2/$target"
-            copy_executable "sample2/build/bin/$target_dir/debugExecutable" sample2 "$result_dir/sample2/$target"
-          done
-          for target in $EMPTY_TARGETS; do
-            target_dir="$(lower_first "$target")"
-            mkdir -p "$result_dir/empty/$target"
-            copy_executable "empty/build/bin/$target_dir/debugExecutable" empty "$result_dir/empty/$target"
-          done
+          copy_executables test debugExecutable konaCommonTest test
+          copy_executables benchmark releaseExecutable konaBenchmark benchmark
+          copy_executables sample2 debugExecutable sample2 sample2
+          copy_executables empty debugExecutable empty empty
 
       - name: Upload build results
         uses: actions/upload-artifact@v4
