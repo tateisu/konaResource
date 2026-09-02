@@ -19,7 +19,9 @@
 - 🔨 は特別な設定が必要
 - ❌ は現状では対応できていない
 
-[^linux-windows-arm64]: Ubuntu標準の`gcc-mingw-w64-x86-64`ではWindows ARM64を生成できないため、LLVM-MinGWとWindows ARM64 JDKのheaderを追加してビルドする。以下をLinux x64環境で実行する。
+[^linux-windows-arm64]: Ubuntu標準の`gcc-mingw-w64-x86-64`ではWindows ARM64を生成できない。
+    LLVM-MinGWとWindows ARM64 JDKのheaderを追加してビルドする。
+    以下をLinux x64環境で実行する。
     ```shell
     mkdir -p /tmp/llvm-mingw
     curl -L https://github.com/mstorsjo/llvm-mingw/releases/download/20260826/llvm-mingw-20260826-ucrt-ubuntu-22.04-x86_64.tar.xz | tar -xJ -C /tmp/llvm-mingw
@@ -31,11 +33,22 @@
     ./gradlew --no-daemon --max-workers=1 -PLinuxX64_WindowsArm64_compiler=aarch64-w64-mingw32-clang -PLinuxX64_WindowsArm64_linkOpt=-shared :common:jvmJar
     ```
     成功すると`common/build/libs/common-jvm-*.jar`に`jp/juggler/konaArchive/native/windows-aarch64/kona_common_jni.dll`が含まれる。
-[^linux-macos]: macOS targetにはApple SDKを含むosxcross環境が必要だが、Ubuntuの標準パッケージだけでは用意できないため未対応。Apple SDKの準備が必要なので容易ではない。 or use https://github.com/tpoechtrager/osxcross ?
-[^macos-linux]: macOSの`cc`はMach-Oを生成するためLinux ELF用には使えない。Linux target用の`aarch64-linux-gnu-gcc`およびLinux x64用のLinux toolchain/sysrootがmacOS runnerにないため未対応。Zig等で対応できる可能性はあるが、Linux ABIとsysrootの検証が必要で容易ではない。
-[^macos-windows]: Windows target用の`x86_64-w64-mingw32-gcc`または`aarch64-w64-mingw32-gcc`とWindows MinGW sysrootがmacOS runnerにないため未対応。macOS用のMinGW/LLVM-MinGW環境または別のLinux build environmentが必要で容易ではない。
-[^windows-linux]: Windows runnerにはLinux ELF用compiler/sysrootがなく、`LinuxArm64`用の`aarch64-linux-gnu-gcc`も`LinuxX64`用のLinux compilerとして利用できないため未対応。Zig等を導入すれば対応できる可能性はあるが、Linux sysrootとABIの検証が必要。
-[^windows-arm64]: Windows標準のMinGW/GCCはx64向けのため、LLVM-MinGWの`20260826-ucrt-x86_64`を展開してPATHへ追加し、Windows ARM64 JDKの`include/`を`jdk/WindowsArm64/include/`へ配置する。Windows x64環境で以下を実行する。
+[^linux-macos]: macOS targetにはApple SDKを含むosxcross環境が必要だが、
+    Ubuntuの標準パッケージだけでは用意できない。
+    Apple SDKの準備が必要なので容易ではない。
+    or use https://github.com/tpoechtrager/osxcross ?
+[^macos-linux]: macOSの`cc`はMach-Oを生成するためLinux ELF用には使えない。
+    Linux target用の`aarch64-linux-gnu-gcc`およびLinux x64用のLinux toolchain/sysrootがmacOS runnerにない。
+    Zig等で対応できる可能性はあるが、Linux ABIとsysrootの検証が必要で容易ではない。
+[^macos-windows]: Windows target用の`x86_64-w64-mingw32-gcc`または`aarch64-w64-mingw32-gcc`とWindows MinGW sysrootが
+    macOS runnerにないため未対応。
+    macOS用のMinGW/LLVM-MinGW環境または別のLinux build environmentが必要で容易ではない。
+[^windows-linux]: Windows runnerにはLinux ELF用compiler/sysrootがなく、
+    `LinuxArm64`用の`aarch64-linux-gnu-gcc`も`LinuxX64`用のLinux compilerとして利用できないため未対応。
+    Zig等を導入すれば対応できる可能性はあるが、Linux sysrootとABIの検証が必要。
+[^windows-arm64]: Windows標準のMinGW/GCCはx64向けのため、LLVM-MinGWの`20260826-ucrt-x86_64`を展開してPATHへ追加し、
+    Windows ARM64 JDKの`include/`を`jdk/WindowsArm64/include/`へ配置する。
+    Windows x64環境で以下を実行する。
     ```shell
     mkdir -p /tmp/llvm-mingw
     curl -L https://github.com/mstorsjo/llvm-mingw/releases/download/20260826/llvm-mingw-20260826-ucrt-x86_64.zip -o /tmp/llvm-mingw.zip
@@ -48,7 +61,8 @@
     ./gradlew --no-daemon --max-workers=1 -PWindowsX64_WindowsArm64_compiler=aarch64-w64-mingw32-clang -PWindowsX64_WindowsArm64_linkOpt=-shared :common:jvmJar
     ```
     成功すると`common/build/libs/common-jvm-*.jar`に`jp/juggler/konaArchive/native/windows-aarch64/kona_common_jni.dll`が含まれる。
-[^windows-macos]: Windows runnerにはApple SDKおよびmacOS cross compilerがないため未対応。Apple SDKの準備が必要なので容易ではない。
+[^windows-macos]: Windows runnerにはApple SDKおよびmacOS cross compilerがないため未対応。
+    Apple SDKの準備が必要なので容易ではない。
 
 # 複数ホストでビルドしたDLLの収集
 commonJni のビルドスクリプトは workflowResult からプラットフォーム別に生成されたcommon.jarから不足プラットフォームのDLLを収集する機能がある。GitHub Workflow とこれを組み合わせると全プラットフォーム対応の common artifact を生成できる。

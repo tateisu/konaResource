@@ -12,11 +12,11 @@
   - uncompressedDigest: Byte[32]
   - uncompressedSize: Int32
 - names: pair(nameBytesLength:Int32, nameBytes[nameBytesLength])[*]
-   - list of pair(nameBytesLength:Int32, nameBytes[nameBytesLength])
-   - nameBytes is encoded in UTF-8
+  - list of pair(nameBytesLength:Int32, nameBytes[nameBytesLength])
+  - nameBytes is encoded in UTF-8
 - dirItems[dirItemsCount] // 12 bytes per element
-   **Sorted in character-code order for each folder; binary-searchable.**
-   There are two kinds of elements:
+  **Sorted in character-code order for each folder; binary-searchable.**
+  There are two kinds of elements:
   - FileItem(
         // Byte offset from the beginning of the file to a names element
         nameOffset: Int32
@@ -29,20 +29,19 @@
          nameOffset: Int32 // Byte offset from the beginning of the file to a names element
          // dirItems index or 0x80000000
          // The most significant bit is 1 (DirectoryItem)
-        storedDirIndex :Int32 = dirIndex | 0x80000000
+         storedDirIndex :Int32 = dirIndex | 0x80000000
          dirSize: Int32 // Number of elements in the folder
          // Note: An empty directory has no elements, so dirIndex is always 0.
-
     )
 - header
   - compressedDataStart:Int32 // Byte offset from the beginning of the file to compressedData
   - contentMetaStart:Int32 // Byte offset from the beginning of the file to contentMeta
-  - contentMetaDigest: Byte[32] // Hash digest of all contentMeta elements
+  - contentMetaDigest: Byte[32] // Hash digest of whole contentMeta
   - namesStart:Int32 // Byte offset from the beginning of the file to names
-  - namesDigest: Byte[32] // Hash digest of all names elements
+  - namesDigest: Byte[32] // Hash digest of whole names
   - dirItemsStart:Int32 // Byte offset from the beginning of the file to dirItems
   - dirItemsCount:Int32 // Number of elements in the dirItems array
-  - dirItemsDigest: Byte[32] // Hash digest of all dirItems elements
+  - dirItemsDigest: Byte[32] // Hash digest of whole dirItems
   - rootDirIndex:Int32 // Starting index of the root directory element list in dirItems
   - rootDirSize:Int32 // Number of elements in the root directory element list
 - headerDigest: Byte[32]

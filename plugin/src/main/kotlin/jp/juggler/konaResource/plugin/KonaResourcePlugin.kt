@@ -7,11 +7,9 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.file.ConfigurableFileCollection
-import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
@@ -22,27 +20,8 @@ import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
-import java.util.Locale
+import java.util.*
 import javax.inject.Inject
-
-private fun compilerForTarget(targetName: String): String = when (targetName.lowercase(Locale.ROOT)) {
-    "linuxx64" -> if (System.getProperty("os.name").lowercase(Locale.ROOT).contains("mac")) {
-        "clang"
-    } else {
-        "cc"
-    }
-
-    "linuxarm64" -> "clang"
-    "mingwx64" -> if (System.getProperty("os.name").lowercase(Locale.ROOT).contains("windows")) {
-        "cc"
-    } else if (System.getProperty("os.name").lowercase(Locale.ROOT).contains("mac")) {
-        "clang"
-    } else {
-        "x86_64-w64-mingw32-gcc"
-    }
-
-    else -> "cc"
-}
 
 @Suppress("unused")
 class KonaResourcePlugin : Plugin<Project> {
@@ -56,18 +35,7 @@ class KonaResourcePlugin : Plugin<Project> {
         }
         project.afterEvaluate {
             generate.configure { task ->
-                task.resourceDirectories.from(
-                    extension.modules.map { (_, rawDirectory) -> project.file(rawDirectory) },
-                )
-                task.moduleNames.set(extension.modules.map { it.first })
-                task.lz4CompressionLevel.set(extension.lz4CompressionLevel)
-                task.lz4BlockSizeID.set(extension.lz4BlockSizeID)
-                task.lz4BlockMode.set(extension.lz4BlockMode)
-                task.lz4ContentSizeFlag.set(extension.lz4ContentSizeFlag)
-                task.lz4ContentChecksumFlag.set(extension.lz4ContentChecksumFlag)
-                task.lz4blockChecksumFlag.set(extension.lz4blockChecksumFlag)
-                task.lz4AutoFlush.set(extension.lz4AutoFlush)
-                task.lz4FavorDecSpeed.set(extension.lz4FavorDecSpeed)
+                task.setFromExtension(extension)
             }
         }
         project.tasks.register("konaResourceObjects").configure { task ->
@@ -80,67 +48,72 @@ class KonaResourcePlugin : Plugin<Project> {
         }
         project.pluginManager.withPlugin("org.jetbrains.kotlin.multiplatform") {
             project.afterEvaluate {
-                fun configureGenerateTask(
-                    task: GenerateKonaResourceTask,
-                    outputDirectory: Provider<Directory>,
-                ) {
-                    task.outputDirectory.set(outputDirectory)
-                    task.resourceDirectories.from(
-                        extension.modules.map { (_, rawDirectory) -> project.file(rawDirectory) },
-                    )
-                    task.moduleNames.set(extension.modules.map { it.first })
-                    task.lz4CompressionLevel.set(extension.lz4CompressionLevel)
-                    task.lz4BlockSizeID.set(extension.lz4BlockSizeID)
-                    task.lz4BlockMode.set(extension.lz4BlockMode)
-                    task.lz4ContentSizeFlag.set(extension.lz4ContentSizeFlag)
-                    task.lz4ContentChecksumFlag.set(extension.lz4ContentChecksumFlag)
-                    task.lz4blockChecksumFlag.set(extension.lz4blockChecksumFlag)
-                    task.lz4AutoFlush.set(extension.lz4AutoFlush)
-                    task.lz4FavorDecSpeed.set(extension.lz4FavorDecSpeed)
-                    task.compilerArgs.convention(emptyList())
-                }
-
                 val kotlin = project.extensions.getByType(KotlinMultiplatformExtension::class.java)
-                kotlin.targets.withType(KotlinNativeTarget::class.java).configureEach { target ->
-                    val targetName = target.name.replaceFirstChar { it.uppercase() }
-                    val targetGenerate = project.tasks.register(
-                        "generateKonaResource$targetName",
-                        GenerateKonaResourceTask::class.java,
-                    )
-                    targetGenerate.configure { task ->
-                        configureGenerateTask(
-                            task,
-                            project.layout.buildDirectory.dir("generated/konaResource/${target.name}"),
-                        )
-                        task.compiler.set(compilerForTarget(target.name))
-                        when {
-                            target.name.equals("linuxX64", ignoreCase = true) &&
-                                System.getProperty("os.name").lowercase(Locale.ROOT).contains("mac") -> {
-                                task.compilerArgs.set(listOf("--target=x86_64-linux-gnu"))
-                            }
-
-                            target.name.equals("linuxArm64", ignoreCase = true) -> {
-                                task.compilerArgs.set(listOf("--target=aarch64-linux-gnu"))
-                            }
-
-                            target.name.equals("mingwX64", ignoreCase = true) &&
-                                System.getProperty("os.name").lowercase(Locale.ROOT).contains("mac") -> {
-                                task.compilerArgs.set(listOf("--target=x86_64-w64-windows-gnu"))
-                            }
-                        }
-                    }
-                    target.binaries.all { binary ->
-                        val linkerOptions: Array<String> = extension.modules.map { module ->
-                            val safeName = module.first.replace(Regex("[^A-Za-z0-9_]"), "_")
-                            targetGenerate.get().outputDirectory.get().file("$safeName.o").asFile.absolutePath
-                        }.toTypedArray()
-                        binary.linkerOpts(*linkerOptions)
-                        binary.linkTaskProvider.configure { it.dependsOn(targetGenerate) }
-                    }
-                }
+                kotlin.targets.withType(KotlinNativeTarget::class.java)
+                    .configureEach { target -> target.updateBuild(extension) }
             }
+        }
     }
 }
+
+private fun KotlinNativeTarget.updateBuild(extension: KonaResourceExtension) {
+    val target = this
+    val targetName = target.name.replaceFirstChar { it.uppercase() }
+    val targetGenerate = project.tasks.register(
+        "generateKonaResource$targetName",
+        GenerateKonaResourceTask::class.java,
+    )
+    targetGenerate.configure { task ->
+        task.outputDirectory.set(
+            project.layout.buildDirectory.dir("generated/konaResource/${target.name}"),
+        )
+        task.compilerArgs.convention(emptyList())
+        task.setFromExtension(extension)
+        task.compiler.set(compilerForTarget(target.name))
+        when {
+            target.name.equals("linuxX64", ignoreCase = true) &&
+                System.getProperty("os.name").lowercase(Locale.ROOT).contains("mac") -> {
+                task.compilerArgs.set(listOf("--target=x86_64-linux-gnu"))
+            }
+
+            target.name.equals("linuxArm64", ignoreCase = true) -> {
+                task.compilerArgs.set(listOf("--target=aarch64-linux-gnu"))
+            }
+
+            target.name.equals("mingwX64", ignoreCase = true) &&
+                System.getProperty("os.name").lowercase(Locale.ROOT).contains("mac") -> {
+                task.compilerArgs.set(listOf("--target=x86_64-w64-windows-gnu"))
+            }
+        }
+    }
+    target.binaries.all { binary ->
+        val linkerOptions: Array<String> = extension.modules.map { module ->
+            val safeName = module.first.replace(Regex("[^A-Za-z0-9_]"), "_")
+            targetGenerate.get().outputDirectory.get().file("$safeName.o").asFile.absolutePath
+        }.toTypedArray()
+        binary.linkerOpts(*linkerOptions)
+        binary.linkTaskProvider.configure { it.dependsOn(targetGenerate) }
+    }
+}
+
+private fun compilerForTarget(targetName: String): String {
+    val hostOsLower = System.getProperty("os.name").lowercase(Locale.ROOT)
+    return when (targetName.lowercase(Locale.ROOT)) {
+        "linuxx64" -> when {
+            hostOsLower.contains("mac") -> "clang"
+            else -> "cc"
+        }
+
+        "linuxarm64" -> "clang"
+
+        "mingwx64" -> when {
+            hostOsLower.contains("windows") -> "cc"
+            hostOsLower.contains("mac") -> "clang"
+            else -> "x86_64-w64-mingw32-gcc"
+        }
+
+        else -> "cc"
+    }
 }
 
 @CacheableTask
@@ -186,6 +159,21 @@ abstract class GenerateKonaResourceTask @Inject constructor(
 
     @get:OutputDirectory
     abstract val outputDirectory: DirectoryProperty
+
+    fun setFromExtension(extension: KonaResourceExtension) {
+        resourceDirectories.from(
+            extension.modules.map { (_, rawDirectory) -> project.file(rawDirectory) },
+        )
+        moduleNames.set(extension.modules.map { it.first })
+        lz4CompressionLevel.set(extension.lz4CompressionLevel)
+        lz4BlockSizeID.set(extension.lz4BlockSizeID)
+        lz4BlockMode.set(extension.lz4BlockMode)
+        lz4ContentSizeFlag.set(extension.lz4ContentSizeFlag)
+        lz4ContentChecksumFlag.set(extension.lz4ContentChecksumFlag)
+        lz4blockChecksumFlag.set(extension.lz4blockChecksumFlag)
+        lz4AutoFlush.set(extension.lz4AutoFlush)
+        lz4FavorDecSpeed.set(extension.lz4FavorDecSpeed)
+    }
 
     @TaskAction
     @Suppress("LongMethod")
