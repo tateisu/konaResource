@@ -1,4 +1,8 @@
+import jp.juggler.konaResource.buildlogic.konaTargets
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
+
 plugins {
+    id("jp.juggler.konaResource.buildlogic")
     alias(libs.plugins.kotlinMultiplatform)
     // Use the locally published plugin implementation
     id("jp.juggler.konaResource.local") version "latest"
@@ -10,23 +14,16 @@ konaResource {
 }
 
 kotlin {
-    linuxX64 {
-        binaries {
-            executable {
-                entryPoint = "jp.juggler.konaResource.sample.main"
-            }
-        }
-    }
-    linuxArm64 {
-        binaries {
-            executable {
-                entryPoint = "jp.juggler.konaResource.sample.main"
-            }
-        }
-    }
-    sourceSets {
-        linuxX64Main.dependencies {
+    konaTargets()
+    targets.withType<KotlinNativeTarget>().configureEach {
+        compilations.getByName("main").defaultSourceSet.kotlin.srcDir("src/linuxX64Main/kotlin")
+        compilations.getByName("main").defaultSourceSet.dependencies {
             implementation(project(":common"))
+        }
+        binaries {
+            executable {
+                entryPoint = "jp.juggler.konaResource.sample.main"
+            }
         }
     }
 }
@@ -44,7 +41,13 @@ val hostArch: String by lazy {
                 else -> error("host is Linux, but os.arch is unexpected. [$arch]")
             }
 
-        else -> error("unexpected arch. ")
+        System.getProperty("os.name").lowercase().contains("windows") &&
+            System.getProperty("os.arch").lowercase() in setOf("amd64", "x86_64", "x64") -> "MingwX64"
+
+        System.getProperty("os.name").lowercase().contains("mac") &&
+            System.getProperty("os.arch").lowercase() in setOf("aarch64", "arm64") -> "MacosArm64"
+
+        else -> error("Unsupported host platform. os.name=${System.getProperty("os.name")}, os.arch=${System.getProperty("os.arch")}")
     }
 }
 
