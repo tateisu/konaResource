@@ -3,7 +3,7 @@ package jp.juggler.konaResource.buildlogic
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 
 /**
- * Kotlin/Nativeのビルドターゲット。
+ * Kotlin/Nativeのビルドターゲット
  */
 enum class KonaBuildTarget(
     val targetName: String,
@@ -13,6 +13,8 @@ enum class KonaBuildTarget(
     LinuxArm64("linuxArm64"),
     MingwX64("mingwX64"),
     MacosArm64("macosArm64", isMacos = true),
+
+    // Note:MacOS X64 は Kotlin Native ではdeprecated
     ;
 
     internal fun isAvailable(): Boolean = !isMacos || macosBuildAvailable()

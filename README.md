@@ -77,6 +77,21 @@ for (entry in root.pathToDir(path)!!) {
 }
 ```
 
+## How Native Resources Are Embedded
+
+The `konaResource` plugin embeds each configured resource directory into every
+Kotlin/Native executable that belongs to the target project:
+
+1. `generateKonaResource` packs the directory into a KonaArchive `.bin` file.
+2. It generates an assembly source using `.incbin`, with exported start and end symbols.
+3. The assembly source is compiled into an object file and passed to the Native linker.
+4. `embedKonaArchive(name)` converts the name to the same safe symbol name and resolves
+   `konaResource_<name>_start` and `konaResource_<name>_end` with `kona_dlsym`.
+5. `EmbedRandomAccess` reads that address range directly from the executable, and the
+   common decoder reads the KonaArchive metadata from it.
+
+The embedded range is read-only and is not copied wholesale into another buffer.
+
 ## Using common
 
 The `common` module provides the KonaArchive reader and writer for Linux/x64
