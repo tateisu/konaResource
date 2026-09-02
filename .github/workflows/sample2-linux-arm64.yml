@@ -7,9 +7,9 @@ permissions:
   contents: read
 
 jobs:
-  sample2-linux-arm64:
-    name: Linux arm64
-    runs-on: ubuntu-24.04-arm
+  build-linux-arm64:
+    name: Build Linux arm64
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out
         uses: actions/checkout@v7
@@ -18,5 +18,27 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
+      - name: Build sample2
+        run: |
+          ./gradlew publishLocalMaven
+          ./gradlew :sample2:linkDebugExecutableLinuxArm64
+      - name: Upload sample2
+        uses: actions/upload-artifact@v4
+        with:
+          name: sample2-linux-arm64
+          path: sample2/build/bin/linuxArm64/debugExecutable/sample2.kexe
+
+  sample2-linux-arm64:
+    name: Linux arm64
+    runs-on: ubuntu-24.04-arm
+    needs: build-linux-arm64
+    steps:
+      - name: Download sample2
+        uses: actions/download-artifact@v4
+        with:
+          name: sample2-linux-arm64
+          path: sample2/build/bin/linuxArm64/debugExecutable
       - name: Run sample2
-        run: ./runSample2.sh
+        run: |
+          chmod +x sample2/build/bin/linuxArm64/debugExecutable/sample2.kexe
+          sample2/build/bin/linuxArm64/debugExecutable/sample2.kexe
