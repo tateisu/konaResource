@@ -97,7 +97,7 @@ jobs:
           lower_first() {
             local value="$1"
             local first="${value:0:1}"
-            first="${first,,}"
+            first="$(printf '%s' "$first" | tr '[:upper:]' '[:lower:]')"
             printf '%s%s' "$first" "${value:1}"
           }
           result_dir="workflowResult/$HOST"
