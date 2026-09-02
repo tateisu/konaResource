@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     // =======================================
     // --- konaResource plugin ---
-    id("jp.juggler.konaResource") version "0.1.5"
+    id("jp.juggler.konaResource") version "0.1.6"
     // =======================================
 }
 
@@ -39,7 +39,7 @@ kotlin {
             // =======================================
             // add konaResource:common library
             // =======================================
-            implementation("jp.juggler.konaResource:common:0.1.5")
+            implementation("jp.juggler.konaResource:common:0.1.6")
         }
     }
 }

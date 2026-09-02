@@ -1,69 +1,22 @@
 # TODO
 ひとつずつ順に実行して、終わったら `[x]` をつける
 
-# benchmarkの単体バイナリ出力 [x]
-- クロスプラットフォーム理由で単体バイナリを出力して、ビルドホスト以外の環境で動くようにしたい
-- test モジュールで既にやったことだが、こちらはデバッグビルドではなくリリースビルドを使う
-- ベンチマーク機構は再発明することになる
-  - 競合製品のソースコードを参考にすること
-  - kotlinx-benchmarkはGradleに重依存しているので使えない。
-- deploy タスクで konaBenchmark なんたらをルートプロジェクトの bin にコピーしてchmod する
-- それらのバイナリはGitHub workflow で使うのでリポジトリに追加する
-  - benchmark:deploy を実行したときだけ更新する
+# plugin と common のマルチプラットフォーム化
+- どのようにアーカイブを埋め込むのか
+- common/src/nativeMain/kotlin/jp/juggler/konaResource/EmbedKonaArchive.kt  でどのようにバイナリを読むのか
+- build-logic/src/main/kotlin/jp/juggler/konaResource/buildlogic/KonaBuildTarget.kt で列挙したアーキが対象
+- MacOS の Universal2 は Kotlin Nativeではどう扱われるのか？
+- JVMターゲットへのリソース埋め込みは可能か？
 
-# testモジュールのCLI
-- [x] クロスプラットフォーム理由でtest cli を独立させた
-  - [x] jvmテスト用のFatJar
-  - [x] Kotlin/Native 各アーキの実行バイナリ
-  - [x] テスト絞り込みフィルタ
-  - [x] テスト実行のロギング
-  - [ ] ビルド高速化
-    - [ ] sample1 は公開済みプラグイン(0.1.4)が config cache 非互換のため一時的に settings.gradle.kts から除外。version を 0.1.5 に更新済み。
-    - [ ] ユーザが v0.1.5 タグを push → CI が Central 公開 → 公開後に settings.gradle.kts の sample1 を再有効化。
+## Github Actions で test, benchmark, cli をクロスプラットフォーム試験する
+- 現在ビルド済みで bin/フォルダにあるものが対象
+  - MacOSはまだbin/フォルダにないので対応できない
+- 動かしたら Benchmark.md を更新する
+- 最後に lz4-java と lz4 native の速度を比較する
 
-
-
-
-
-
-# blakeJni DLLのクロスプラットフォームビルド
-以下の環境用のDLLを全部生成する
-Linux x64 glibc
-Linux x64 musl # skip due to https://youtrack.jetbrains.com/issue/KT-38891
-Linux arm64 glibc
-macOS universal2
-Windows x64
-Windows arm64
-
-
-
-## test, benchmark をクロスプラットフォーム実行するGithub Action
-  - アーキ別に書いてそれぞれ問題がないことを確認し、最後に単一ワークフローにまとめる
-
-
-## Github Actions に環境別テストマトリクスを書く 
-- 各ABI個別のworkflowファイルを作成（後で合成可能）
-- Linux x64 musl のスコア: `3861.073 ± 115.546 ops/s`
-- Kotlin/Native は glibc 前提のため musl では動作せず。JVMテスト/benchmarkのみ実行
-
-対象環境:
-
-| 優先度 | OS      | CPU    | ABI / libc | 成果物例       | Blake3Jni benchmark          |
-|--------|---------|--------|------------|----------------|------------------------------|
-| 必須   | Linux   | x86_64 | glibc      | `libfoo.so`    | `4877.359 ± 122.289 ops/s`   |
-| 追加   | Linux   | x86_64 | musl       | `libfoo.so`    | `3861.073 ± 115.546 ops/s`   |
-| 必須   | Linux   | arm64  | glibc      | `libfoo.so`    | 未計測                       |
-| 必須   | macOS   | x86_64 | Darwin     | `libfoo.dylib` | 未計測                       |
-| 必須   | macOS   | arm64  | Darwin     | `libfoo.dylib` | 未計測                       |
-| 必須   | Windows | x86_64 | MSVC       | `foo.dll`      | 未計測                       |
-| 追加   | Windows | arm64  | MSVC       | `foo.dll`      | 未計測                       |
-
-次は Linux    arm64   glibc だ。
-- github/workflows/blake3-jni-abi-test.yml を参考にする。これはLinux x86_64 glibc 用だ
-- プラットフォームごとにワークフローymlを書いて、個別に動作検証
-- git commit / push を許可する
-- gh 操作でのワークフロー開始を許可する
-- ワークフローが正常終了したらこの文書の表に Blake3Jni benchmark スコアを記載する
+## Github Actions でクロスプラットフォームビルドを試験する
+- JNIビルドとKotlin/Nativeビルドの2種類がある
+- 特にMacOS では Universal2 ビルドや片方だけのDLLを含む
 
 # 資料
 
