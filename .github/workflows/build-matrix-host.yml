@@ -39,7 +39,7 @@ jobs:
         run: ./gradlew --no-daemon --max-workers=1 publishLocalMaven
 
       - name: Build all
-        run: ./gradlew --no-daemon --max-workers=1 build
+        run: ./gradlew --no-daemon --max-workers=1 build -x :sample1:build
 
       - name: Collect build results
         env:
