@@ -1,0 +1,20 @@
+## works not tagged
+- Updated GitHub Actions to the latest major versions: `actions/checkout@v7`, `actions/setup-java@v6`, `actions/cache@v6`, and `gradle/actions/setup-gradle@v6`.
+- The `jp.juggler.konaResource.local` Gradle plugin marker is now excluded from Maven Central publications while remaining available from `localMaven`.
+- Updated the README to reflect Linux ARM support and renamed the plugin configuration section.
+
+## v0.1.6
+- `KonaArchive` data schema version 2. digest hash is changed from SHA-256 to BLAKE3-256.
+  - Decoder supports v1 archive.
+  - Encoder does not supports v1 archive.
+  - Incremental update just ignore v1 archive.
+- Cross-build support is not yet complete:
+  - See also `Cross-target build` section in `README.md`.
+  - Note: `plugin` module not yet supports multi-platform embedding.
+  - `commonJni` module automatically detects which architectures the host can build and whether multi-platform JDK JNI headers are downloaded to a specific folder.
+  - `test` module supports multi-platform test CLI that runs without Gradle.
+  - `benchmark` module supports multi-platform benchmark CLI that runs without Gradle.
+
+
+## v0.1.4
+- First artifact has been published on Maven Central.

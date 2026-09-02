@@ -42,3 +42,10 @@ gradlePlugin {
         }
     }
 }
+
+// The local marker is only for localMaven and must not be sent to Maven Central.
+tasks.matching {
+    it.name == "publishKonaResourceLocalPluginMarkerMavenPublicationToNmcpRepository"
+}.configureEach {
+    enabled = false
+}
