@@ -102,39 +102,19 @@ kotlin {
 
 tasks.named<ProcessResources>("jvmProcessResources") {
     val availableTargets = project.availableJniBuildTargets()
-    availableTargets.forEach { target ->
-        when (target) {
-            JniBuildTarget.LinuxX64 -> {
-                dependsOn(":commonJni:buildBlake3JniLinuxX64")
-                from(rootProject.file("commonJni/build/native/linuxX64/libblake3_jni.so")) {
-                    into("jp/juggler/konaArchive/native/linux-x86_64")
-                }
-            }
-
-            JniBuildTarget.LinuxArm64 -> {
-                dependsOn(":commonJni:buildBlake3JniLinuxArm64")
-                from(rootProject.file("commonJni/build/native/linuxArm64/libblake3_jni.so")) {
-                    into("jp/juggler/konaArchive/native/linux-aarch64")
-                }
-            }
-
-            JniBuildTarget.WindowsX64 -> {
-                dependsOn(":commonJni:buildBlake3JniWindowsX64")
-                from(rootProject.file("commonJni/build/native/windowsX64/blake3_jni.dll")) {
-                    into("jp/juggler/konaArchive/native/windows-x86_64")
-                }
-            }
-
-            JniBuildTarget.WindowsArm64 -> {
-                dependsOn(":commonJni:buildBlake3JniWindowsArm64")
-                from(rootProject.file("commonJni/build/native/windowsArm64/blake3_jni.dll")) {
-                    into("jp/juggler/konaArchive/native/windows-aarch64")
-                }
-            }
-
-            JniBuildTarget.MacosX64,
-            JniBuildTarget.MacosArm64,
-            -> Unit
+    listOf(
+        JniBuildTarget.LinuxX64 to "linux-x86_64",
+        JniBuildTarget.LinuxArm64 to "linux-aarch64",
+        JniBuildTarget.WindowsX64 to "windows-x86_64",
+        JniBuildTarget.WindowsArm64 to "windows-aarch64",
+    ).forEach { (target, resourceDirectory) ->
+        if (target in availableTargets) {
+            dependsOn(":commonJni:buildBlake3Jni${target.buildName.replaceFirstChar { it.uppercase() }}")
+        } else {
+            dependsOn(":commonJni:collectJniFromWorkflowResult")
+        }
+        from(rootProject.file("commonJni/build/native/${target.buildName}/${target.libraryName}")) {
+            into("jp/juggler/konaArchive/native/$resourceDirectory")
         }
     }
 
@@ -142,8 +122,10 @@ tasks.named<ProcessResources>("jvmProcessResources") {
         JniBuildTarget.MacosArm64 in availableTargets
     ) {
         dependsOn(":commonJni:buildBlake3JniMacosUniversal2")
-        from(rootProject.file("commonJni/build/native/macosUniversal2/libblake3_jni.dylib")) {
-            into("jp/juggler/konaArchive/native/macos-universal")
-        }
+    } else {
+        dependsOn(":commonJni:collectJniFromWorkflowResult")
+    }
+    from(rootProject.file("commonJni/build/native/macosUniversal2/libkona_common_jni.dylib")) {
+        into("jp/juggler/konaArchive/native/macos-universal")
     }
 }

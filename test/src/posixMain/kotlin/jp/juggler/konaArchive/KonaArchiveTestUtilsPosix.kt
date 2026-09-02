@@ -1,7 +1,6 @@
 package jp.juggler.konaArchive
 
 import jp.juggler.konaArchive.util.ErrnoException
-import jp.juggler.konaArchive.util.FILE_PERMISSION_U_RWX
 import jp.juggler.konaArchive.util.FileRandomAccessPosix
 import jp.juggler.konaArchive.util.FileType
 import jp.juggler.konaArchive.util.fileType
@@ -13,7 +12,6 @@ import platform.posix.ENOENT
 import platform.posix.closedir
 import platform.posix.errno
 import platform.posix.getpid
-import platform.posix.mkdir
 import platform.posix.opendir
 import platform.posix.readdir
 import platform.posix.rmdir
@@ -83,7 +81,7 @@ internal object KonaArchiveTestUtilsPosix : KonaArchiveTestUtils {
         if (path.isEmpty() || path == "/") return
         val parent = path.substringBeforeLast('/', "")
         if (parent.isNotEmpty() && parent != path) makeDirectory(parent)
-        if (mkdir(path, FILE_PERMISSION_U_RWX) != 0 && errno != EEXIST) {
+        if (mkdirWithUserRwxPermission(path) != 0 && errno != EEXIST) {
             throw ErrnoException("Unable to create directory: $path")
         }
     }

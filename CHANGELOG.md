@@ -8,6 +8,9 @@
 - Documented the Kotlin/Native resource embedding pipeline in the README.
 - Added `KonaBuildHost` to centralize Kotlin/Native build-host detection.
 - Added host/target-specific Gradle property overrides for JNI compiler and options.
+- `commonJni` can supplement unavailable JNI libraries from result Jars, while missing optional libraries do not fail the build.
+- Published `common-jvm` artifacts can include JNI libraries for all available target platforms.
+- Renamed the bundled common JNI libraries to `kona_common_jni`.
 
 ## v0.1.6
 - `KonaArchive` data schema version 2. digest hash is changed from SHA-256 to BLAKE3-256.

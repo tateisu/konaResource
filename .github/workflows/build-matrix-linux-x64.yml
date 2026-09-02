@@ -1,0 +1,18 @@
+name: build matrix - Linux x64
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: ./.github/workflows/build-matrix-host.yml
+    with:
+      host: LinuxX64
+      runner: ubuntu-24.04
+      test_task: linkDebugExecutableLinuxX64
+      benchmark_task: linkReleaseExecutableLinuxX64
+      sample2_tasks: linkDebugExecutableLinuxX64 linkDebugExecutableLinuxArm64 linkDebugExecutableMingwX64
+      sample2_targets: LinuxX64 LinuxArm64 MingwX64

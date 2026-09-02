@@ -1,0 +1,18 @@
+name: build matrix - Windows x64
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: ./.github/workflows/build-matrix-host.yml
+    with:
+      host: WindowsX64
+      runner: windows-2025
+      test_task: linkDebugExecutableMingwX64
+      benchmark_task: linkReleaseExecutableMingwX64
+      sample2_tasks: linkDebugExecutableMingwX64
+      sample2_targets: MingwX64

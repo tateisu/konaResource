@@ -64,7 +64,7 @@ abstract class CommonJniBuildTask : DefaultTask() {
         if (!jniHeader.get().asFile.isFile) {
             throw GradleException("jni.h was not found under ${jniHeader.get().asFile.parentFile}")
         }
-        val workDirectory = File(output.parentFile, "blake3_jni-work").apply { mkdirs() }
+        val workDirectory = File(output.parentFile, "kona_common_jni-work").apply { mkdirs() }
         val includeArgs = includeDirs.files.map { "-I${it.absolutePath}" }.toList()
         val intermediateLibraries = units.mapIndexed { index, unit ->
             val unitDirectory = File(workDirectory, "unit$index").apply { mkdirs() }

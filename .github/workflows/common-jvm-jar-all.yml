@@ -2,6 +2,7 @@ name: common-jvm jar - all hosts
 
 on:
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read

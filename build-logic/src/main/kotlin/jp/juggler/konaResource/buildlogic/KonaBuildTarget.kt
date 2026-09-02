@@ -14,7 +14,7 @@ enum class KonaBuildTarget(
     MingwX64("mingwX64"),
     MacosArm64("macosArm64", isMacos = true),
 
-    // Note:MacOS X64 は Kotlin Native ではdeprecated
+    // Note:MacOS X64 は Kotlin Native 2.3.20以降でdeprecated
     ;
 
     internal fun isAvailable(): Boolean = !isMacos || macosBuildAvailable()

@@ -1,6 +1,7 @@
 # 禁止事項
 - CI関連の情報を文書に記載しない
 - ./gradlew build はリリースビルドを含むが、Kotlin/Nativeのそれはかなり重いのでなるべく避ける。特にtestモジュールはデバッグバイナリを作成してそれを動かすのが良い
+- GitHub Workflow を試す場合、全ホストオーケストレーションするのはやめて。ホスト毎に検証して、最後にオーケストレーションにして。
 
 # 推奨事項
 - 作業が一段落したらCHANGELOG.md を更新する
@@ -8,6 +9,7 @@
 # 資料
 - `README.md` ユーザ向け説明
 - `KonaArchiveFormat.md` KonaArchive file format
+- `BuildMatrixJni.md` Build Matrix for `commonJni` module
 
 # OSS.md 編集スタイル
 - Runtime Dependency の確認対象はsample2とempty。
@@ -30,50 +32,27 @@
 - またはビルドターゲットとビルドホストのアーキが一致するならGradleが使ってるjavaのホームディレクトリの/include/jni.h を存在確認してそれを使う
 - どちらもないならそのビルドターゲットはavailableではないとみなす
 
-# ビルドマトリクス(JNI)
-- KonaBuildHost と JniBuildTarget の組み合わせ表
-- ホスト毎に Github workflow を使って試験してセルを埋めていく
-- ホスト毎にクロスコンパイル環境の準備が必要
-- 現在のワークツリーのjdkフォルダをどうにか Github workflowにアップロードできないか？
-  - アップロード対象は include/ フォルダだけでも良いか？
-- :common をビルドして、DLL入のJarファイルをダウンロードする
-  - ダウンロード先は `{rootProject}/workflowResult/{hostArch}/common.jar`
-  - ダウンロードしたjarに含まれるtargetアーキ用DLLをビルド成功とみなす。動作確認は別の機会
-- 成功しなかったものはセルにマークダウン注釈参照を書き、注釈に失敗状況を説明する
-
-| Host \ Target | LinuxX64 | LinuxArm64 | WindowsX64 | WindowsArm64 | MacosX64 | MacosArm64 |
-|---------------|----------|------------|------------|--------------|----------|------------|
-| LinuxX64      | ✅       | ✅         | ✅         | ❌[^linux-windows-arm64] | ❌[^linux-macos] | ❌[^linux-macos] |
-| MacosArm64    | ❌[^macos-linux] | ❌[^macos-linux] | ❌[^macos-windows] | ❌[^macos-windows] | ✅       | ✅         |
-| MacosX64      | ❌[^macos-linux] | ❌[^macos-linux] | ❌[^macos-windows] | ❌[^macos-windows] | ✅       | ✅         |
-| WindowsX64    | ❌[^windows-linux] | ❌[^windows-linux] | ✅         | ❌[^windows-arm64] | ❌[^windows-macos] | ❌[^windows-macos] |
-- ✅ は比較的容易にビルドできる
-- 🔨 は特別な設定が必要
-- ❌ は現状では対応できていない
-
-[^linux-windows-arm64]: `WindowsArm64`には`aarch64-w64-mingw32-gcc`が必要だが、Ubuntuの標準パッケージにこのMinGW ARM64クロスコンパイラがないため未対応。ただしprebuilt LLVM-MinGWをWorkflowで取得すれば比較的容易に対応できる見込みで、compiler設定とリンクフラグの調整が必要。
-[^linux-macos]: macOS targetにはApple SDKを含むosxcross環境が必要だが、Ubuntuの標準パッケージだけでは用意できないため未対応。Apple SDKの準備が必要なので容易ではない。 or use https://github.com/tpoechtrager/osxcross ?
-[^macos-linux]: macOSの`cc`はMach-Oを生成するためLinux ELF用には使えない。Linux target用の`aarch64-linux-gnu-gcc`およびLinux x64用のLinux toolchain/sysrootがmacOS runnerにないため未対応。Zig等で対応できる可能性はあるが、Linux ABIとsysrootの検証が必要で容易ではない。
-[^macos-windows]: Windows target用の`x86_64-w64-mingw32-gcc`または`aarch64-w64-mingw32-gcc`とWindows MinGW sysrootがmacOS runnerにないため未対応。macOS用のMinGW/LLVM-MinGW環境または別のLinux build environmentが必要で容易ではない。
-[^windows-linux]: Windows runnerにはLinux ELF用compiler/sysrootがなく、`LinuxArm64`用の`aarch64-linux-gnu-gcc`も`LinuxX64`用のLinux compilerとして利用できないため未対応。Zig等を導入すれば対応できる可能性はあるが、Linux sysrootとABIの検証が必要。
-[^windows-arm64]: Windows runnerに標準搭載されるMinGW/GCCはx64向けで、`aarch64-w64-mingw32-gcc`とWindows ARM64 MinGW sysrootがないため未対応。ただしWindows用prebuilt LLVM-MinGWは全Windows targetをサポートするため比較的容易に対応できる見込みで、現在のGCC固定設定とリンクフラグの調整が必要。
-[^windows-macos]: Windows runnerにはApple SDKおよびmacOS cross compilerがないため未対応。Apple SDKの準備が必要なので容易ではない。
-
-# ビルドマトリクス(cli,test,benchmark,sample2)
+# ビルドマトリクス(test,benchmark,sample2)
 - KonaBuildHost と KonaBuildTarget の組み合わせ表
 - セルには未実施なら❓, ビルド成功したら ✅, 失敗ならマークダウン注釈参照を書く
 - まず表をざっくり書き、セルは未実施の絵文字にする。
 - その後、ホスト毎に Github workflow を使って試験してセルを埋めていく
-- ホスト毎にcli,test,benchmark,sample2(クロスコンパイル)をビルドして、結果をダウンロードする
+- ホスト毎に test,benchmark,sample2(クロスコンパイル)をビルドして、結果をダウンロードする
   - gradleを2回起動することになる。runSample2.sh を参考
   - 実行はしない。ビルドとダウンロードだけだ
+  - jar は収集対象外。jar中のJNIは別マトリクスの話だ
 - commonJniのビルドも動くが、ホストOSで動けばいいのでJNIクロスコンパイルの準備は不要なはず
 - sample2 のバイナリ複数(クロスコンパイル)をビルドして、結果をダウンロードする
   - ダウンロード先の例 `{rootProject}/workflowResult/{hostArch}/{cli|test|sample2}なんたら`
-  - なんたらの部分は複数アーキで異なる？ jar もある？
+  - なんたらの部分は複数アーキで異なる
   - ダウンロードできたsample2のターゲットarchごとにセルを成功とみなす
 - 成功しなかったものはセルにマークダウン注釈参照を書き、注釈に失敗状況を説明する
 
-TODO ここに表を書く
+| Host\Target | LinuxX64 | LinuxArm64 | MingwX64 | MacosArm64      |
+|-------------|----------|------------|----------|-----------------|
+| LinuxX64    | ✅       | ✅         | ✅       | ❌[^need-macos] |
+| MacosArm64  | ❓       | ❓         | ❓       | ❓              |
+| MacosX64    | ❓       | ❓         | ❓       | ❓              |
+| WindowsX64  | ❓       | ❓         | ❓       | ❌[^need-macos] |
 
-TODO ここに注釈で失敗状況を書く
+[^need-macos]: Kotlin/Nativeの公式サポートでは、Linux/WindowsホストからAppleターゲットの最終バイナリをビルドできない。本プロジェクトの`common`はC interop依存でもある。非公式な`osxcross`環境で動く可能性はあるが、本プロジェクトでは未対応。

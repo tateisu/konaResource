@@ -30,7 +30,7 @@ jobs:
         if: failure()
         run: cat /home/runner/work/konaResource/konaResource/common/build/reports/tests/jvmTest/index.html || true
       - name: Show commonJni .so info
-        run: file commonJni/build/native/libblake3_jni.so && ldd commonJni/build/native/libblake3_jni.so || true
+         run: file commonJni/build/native/linuxArm64/libkona_common_jni.so && ldd commonJni/build/native/linuxArm64/libkona_common_jni.so || true
       - name: BENCHMARK (jvm)
         env:
           SKIP_NATIVE_TARGETS: "true"

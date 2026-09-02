@@ -8,5 +8,6 @@
 jdk-downloads/
 jdk/*
 localMaven/
+workflowResult/
 
 !/jdk/.place-holder

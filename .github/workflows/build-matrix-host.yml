@@ -72,20 +72,26 @@ jobs:
           BENCHMARK_TASK: ${{ inputs.benchmark_task }}
           SAMPLE2_TARGETS: ${{ inputs.sample2_targets }}
         run: |
+          lower_first() {
+            local value="$1"
+            local first="${value:0:1}"
+            first="${first,,}"
+            printf '%s%s' "$first" "${value:1}"
+          }
           result_dir="workflowResult/$HOST"
           mkdir -p "$result_dir/test" "$result_dir/benchmark" "$result_dir/sample2"
           if [[ -n "$TEST_TASK" ]]; then
             test_target="${TEST_TASK#linkDebugExecutable}"
-            test_target="${test_target,}${test_target:1}"
+            test_target="$(lower_first "$test_target")"
             cp test/build/bin/"$test_target"/debugExecutable/konaCommonTest* "$result_dir/test/"
           fi
           if [[ -n "$BENCHMARK_TASK" ]]; then
             benchmark_target="${BENCHMARK_TASK#linkReleaseExecutable}"
-            benchmark_target="${benchmark_target,}${benchmark_target:1}"
+            benchmark_target="$(lower_first "$benchmark_target")"
             cp benchmark/build/bin/"$benchmark_target"/releaseExecutable/konaBenchmark* "$result_dir/benchmark/"
           fi
           for target in $SAMPLE2_TARGETS; do
-            target_dir="${target,}${target:1}"
+            target_dir="$(lower_first "$target")"
             mkdir -p "$result_dir/sample2/$target"
             cp sample2/build/bin/"$target_dir"/debugExecutable/sample2* "$result_dir/sample2/$target/"
           done

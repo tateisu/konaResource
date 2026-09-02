@@ -1,6 +1,9 @@
+import jp.juggler.konaResource.buildlogic.CollectJniFromWorkflowResultTask
 import jp.juggler.konaResource.buildlogic.CommonJniBuildTask
 import jp.juggler.konaResource.buildlogic.CommonJniBuildUnit
+import jp.juggler.konaResource.buildlogic.JniCollectionSpec
 import jp.juggler.konaResource.buildlogic.JniBuildTarget
+import jp.juggler.konaResource.buildlogic.WorkflowResultJarSpec
 import jp.juggler.konaResource.buildlogic.availableJniBuildTargets
 import jp.juggler.konaResource.buildlogic.jniBuildProperty
 import jp.juggler.konaResource.buildlogic.jniBuildOptions
@@ -114,6 +117,59 @@ fun JniBuildTarget.registerJniBuild() {
 
 val availableJniBuildTargets = project.availableJniBuildTargets()
 
+val workflowResultJars = fileTree(rootProject.file("workflowResult")) {
+    include("**/common.jar")
+}.files
+    // workflowResult/common.jar is the local host build, not a host-specific result.
+    .filter { it.parentFile != rootProject.file("workflowResult") }
+    .map { it to it.parentFile.name }
+    .sortedWith(compareBy({ it.second }, { it.first.absolutePath }))
+
+val jniCollectionSpecs = buildList {
+    JniBuildTarget.entries
+        .filter { it !in availableJniBuildTargets }
+        .filter { it != JniBuildTarget.MacosX64 && it != JniBuildTarget.MacosArm64 }
+        .forEach { target ->
+            add(
+                JniCollectionSpec(
+                    resourcePath = "jp/juggler/konaArchive/native/${when (target) {
+                        JniBuildTarget.LinuxX64 -> "linux-x86_64/libkona_common_jni.so"
+                        JniBuildTarget.LinuxArm64 -> "linux-aarch64/libkona_common_jni.so"
+                        JniBuildTarget.WindowsX64 -> "windows-x86_64/kona_common_jni.dll"
+                        JniBuildTarget.WindowsArm64 -> "windows-aarch64/kona_common_jni.dll"
+                        else -> error("Unexpected macOS target")
+                    }}",
+                    outputPath = nativeBuildDirectory.get().dir(target.buildName).file(target.libraryName).asFile.absolutePath,
+                    targetName = target.name,
+                ),
+            )
+        }
+    if (JniBuildTarget.MacosX64 !in availableJniBuildTargets ||
+        JniBuildTarget.MacosArm64 !in availableJniBuildTargets
+    ) {
+        add(
+            JniCollectionSpec(
+                resourcePath = "jp/juggler/konaArchive/native/macos-universal/libkona_common_jni.dylib",
+                outputPath = nativeBuildDirectory.get().dir("macosUniversal2").file("libkona_common_jni.dylib").asFile.absolutePath,
+                targetName = "MacosArm64",
+            ),
+        )
+    }
+}
+
+val collectJniFromWorkflowResult = tasks.register<CollectJniFromWorkflowResultTask>("collectJniFromWorkflowResult") {
+    group = "build"
+    description = "Collects unavailable JNI libraries from common.jar files in workflowResult"
+    sourceJars.from(workflowResultJars.map { it.first })
+    sourceJarSpecs.set(workflowResultJars.map {
+        WorkflowResultJarSpec(it.first.absolutePath, it.second)
+    })
+    collectionSpecs.set(jniCollectionSpecs)
+    outputFiles.from(jniCollectionSpecs.map { it.outputPath })
+}
+
+tasks.assemble { dependsOn(collectJniFromWorkflowResult) }
+
 // このホストでビルド可能なアーキを全部ビルド
 availableJniBuildTargets.forEach{ it.registerJniBuild() }
 
@@ -122,7 +178,7 @@ if (JniBuildTarget.MacosX64 in availableJniBuildTargets &&
     JniBuildTarget.MacosArm64 in availableJniBuildTargets
 ) {
     // registerMacosUniversal2Build
-    val macosUniversal = nativeBuildDirectory.map { it.dir("macosUniversal2").file("libblake3_jni.dylib") }
+    val macosUniversal = nativeBuildDirectory.map { it.dir("macosUniversal2").file("libkona_common_jni.dylib") }
     val macosJniIncludeDir = file(JniBuildTarget.MacosX64.javaHome(rootProject.projectDir)).resolve("include")
     val registeredTask = tasks.register("buildBlake3JniMacosUniversal2", CommonJniBuildTask::class.java) {
         group = "build"

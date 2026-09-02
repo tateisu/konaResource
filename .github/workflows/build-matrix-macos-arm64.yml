@@ -1,0 +1,18 @@
+name: build matrix - macOS arm64
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: ./.github/workflows/build-matrix-host.yml
+    with:
+      host: MacosArm64
+      runner: macos-15
+      test_task: linkDebugExecutableMacosArm64
+      benchmark_task: linkReleaseExecutableMacosArm64
+      sample2_tasks: linkDebugExecutableMacosArm64
+      sample2_targets: MacosArm64
