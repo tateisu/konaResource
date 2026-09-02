@@ -46,11 +46,23 @@ enum class JniBuildTarget(
     }
 
     /**
+     * Windows x64ホストでは、ホストのMinGW compilerでWindows x64向けJNIをビルドする。
+     * Linuxなどからのクロスビルドでは、ターゲット用compilerを使う。
+     */
+    fun compilerForHost(): String = if (
+        name == "WindowsX64" && System.getProperty("os.name").lowercase().contains("windows")
+    ) {
+        "gcc"
+    } else {
+        compiler
+    }
+
+    /**
      * このホストでJNIをビルドできるなら真
      */
     internal fun isAvailable(rootProjectDirectory: File): Boolean =
         (!isMacos || macosBuildAvailable()) &&
-            isCompilerAvailable(compiler) &&
+            isCompilerAvailable(compilerForHost()) &&
             File(javaHome(rootProjectDirectory), "include/jni.h").isFile
 
     /**

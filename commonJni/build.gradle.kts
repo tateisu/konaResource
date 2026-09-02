@@ -41,7 +41,7 @@ fun JniBuildTarget.registerJniBuild(
     return tasks.register(taskName, CommonJniBuildTask::class.java) {
         group = "build"
         description = "Builds the BLAKE3 JNI shared library for $buildName"
-        this.compiler.set(this@registerJniBuild.compiler)
+        this.compiler.set(this@registerJniBuild.compilerForHost())
         this.linkFlags.set(linkFlags)
         buildUnits.set(listOf(CommonJniBuildUnit(arch = arch, sources = sources, cflags = cflags)))
         includeDirs.setFrom(
