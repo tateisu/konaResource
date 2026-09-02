@@ -58,6 +58,7 @@ class KonaResourcePlugin : Plugin<Project> {
 
 private fun KotlinNativeTarget.updateBuild(extension: KonaResourceExtension) {
     val target = this
+    val hostOsLower = System.getProperty("os.name").lowercase(Locale.ROOT)
     val targetName = target.name.replaceFirstChar { it.uppercase() }
     val targetGenerate = project.tasks.register(
         "generateKonaResource$targetName",
@@ -72,7 +73,7 @@ private fun KotlinNativeTarget.updateBuild(extension: KonaResourceExtension) {
         task.compiler.set(compilerForTarget(target.name))
         when {
             target.name.equals("linuxX64", ignoreCase = true) &&
-                System.getProperty("os.name").lowercase(Locale.ROOT).contains("mac") -> {
+                (hostOsLower.contains("mac") || hostOsLower.contains("windows")) -> {
                 task.compilerArgs.set(listOf("--target=x86_64-linux-gnu"))
             }
 
@@ -81,7 +82,7 @@ private fun KotlinNativeTarget.updateBuild(extension: KonaResourceExtension) {
             }
 
             target.name.equals("mingwX64", ignoreCase = true) &&
-                System.getProperty("os.name").lowercase(Locale.ROOT).contains("mac") -> {
+                hostOsLower.contains("mac") -> {
                 task.compilerArgs.set(listOf("--target=x86_64-w64-windows-gnu"))
             }
         }
@@ -100,7 +101,7 @@ private fun compilerForTarget(targetName: String): String {
     val hostOsLower = System.getProperty("os.name").lowercase(Locale.ROOT)
     return when (targetName.lowercase(Locale.ROOT)) {
         "linuxx64" -> when {
-            hostOsLower.contains("mac") -> "clang"
+            hostOsLower.contains("mac") || hostOsLower.contains("windows") -> "clang"
             else -> "cc"
         }
 

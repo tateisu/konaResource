@@ -48,16 +48,14 @@
   - ダウンロードできたsample2のターゲットarchごとにセルを成功とみなす
 - 成功しなかったものはセルにマークダウン注釈参照を書き、注釈に失敗状況を説明する
 
-| Host\Target | LinuxX64               | LinuxArm64             | MingwX64               | MacosArm64       |
-|-------------|------------------------|------------------------|------------------------|------------------|
-| LinuxX64    | ✅                     | ✅                     | ✅                     | ❌[^macos-cross] |
-| MacosArm64  | ✅                     | ✅                     | ✅                     | ✅               |
-| MacosX64    | ❓[^macos-x64-cross]  | ❓[^macos-x64-cross]  | ❓[^macos-x64-cross]  | ✅               |
-| WindowsX64  | ❓                     | ❓                     | ❓                     | ❌[^macos-cross] |
+| Host\Target | LinuxX64             | LinuxArm64           | MingwX64             | MacosArm64       |
+|-------------|----------------------|----------------------|----------------------|------------------|
+| LinuxX64    | ✅                   | ✅                   | ✅                   | ❌[^macos-cross] |
+| MacosArm64  | ✅                   | ✅                   | ✅                   | ✅               |
+| MacosX64    | ✅                   | ✅                   | ✅                   | ✅               |
+| WindowsX64  | ❓                   | ❓                   | ❓                   | ❌[^macos-cross] |
 
 [^macos-cross]: Kotlin/Native の公式サポートでは、Linux / WindowsホストからAppleターゲットの最終バイナリをビルドできない。
     非公式な`osxcross`環境で動く可能性はあるが、本プロジェクトでは未対応。
     また本プロジェクトの`common`はC interopを含み、
     `pluin`ではアセンブリを書いてツールチェインでオブジェクトファイルを作成する点にも注意が必要だ。
-
-[^macos-x64-cross]: MacosX64ターゲットはKotlin/Native 2.3.20以降で非推奨だが利用可能。ただし本プロジェクトの`KonaBuildTarget`では対象外としているため、`test`・`benchmark`にMacosX64向けタスクがない。今回のWorkflowではMacosArm64向け`sample2`だけをビルドし、LinuxX64、LinuxArm64、MingwX64向けのクロスコンパイルを実行していないため未検証。

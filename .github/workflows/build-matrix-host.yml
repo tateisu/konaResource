@@ -39,9 +39,12 @@ jobs:
         run: ./gradlew --no-daemon --max-workers=1 publishLocalMaven
 
       - name: Build all
-        run: ./gradlew --no-daemon --max-workers=1 build -x :sample1:build
+        id: build
+        continue-on-error: true
+        run: ./gradlew --no-daemon --max-workers=1 build --continue -x :sample1:build
 
       - name: Collect build results
+        if: always()
         env:
           HOST: ${{ inputs.host }}
         run: |
@@ -65,7 +68,6 @@ jobs:
             shopt -u nullglob
             if [[ "$count" -eq 0 ]]; then
               printf 'No executable found: %s/%s/%s.{kexe,exe}\n' "$module" "$configuration" "$executable_name" >&2
-              return 1
             fi
           }
           result_dir="workflowResult/$HOST"
@@ -76,8 +78,13 @@ jobs:
           copy_executables empty debugExecutable empty empty
 
       - name: Upload build results
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: build-matrix-${{ inputs.host }}
           path: workflowResult/${{ inputs.host }}
-          if-no-files-found: error
+          if-no-files-found: warn
+
+      - name: Report build failure
+        if: steps.build.outcome == 'failure'
+        run: exit 1
