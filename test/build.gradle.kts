@@ -159,16 +159,16 @@ val cliNativeBinaries = buildList {
 // A(ネイティブバイナリ)と B(FatJar)をルートプロジェクトへコピーする。
 tasks.register("deploy", DeployKonaCommonTestTask::class.java) {
     group = "build"
-    description = "Copies the CLI native binaries and FatJar to the root project"
+    description = "Copies the CLI native binaries and FatJar to rootProject/bin"
     dependsOn(fatJar)
     cliNativeBinaries.forEach { dependsOn(it.linkTaskName) }
-    destinationDirectory.set(rootProject.layout.projectDirectory)
+    destinationDirectory.set(rootProject.layout.projectDirectory.dir("bin"))
     deployedFiles.from(
-        rootProject.file("konaCommonTest.jar"),
+        rootProject.file("bin/konaCommonTest.jar"),
         cliNativeBinaries.map { binary ->
             val binaryFile = tasks.named<KotlinNativeLink>(binary.linkTaskName).get().outputFile.get()
             val extension = binaryFile.extension.takeIf { it.isNotEmpty() && it != "kexe" }?.let { ".$it" } ?: ""
-            rootProject.file("konaCommonTest-${binary.displayName}$extension")
+            rootProject.file("bin/konaCommonTest-${binary.displayName}$extension")
         },
     )
     fatJarFile.set(fatJar.flatMap { it.archiveFile })

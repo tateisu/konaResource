@@ -107,8 +107,8 @@ into an executable.
 reason to cross-platform, this app build separate binary to unit test.
 ```
 ./gradlew test:deploy
-java -jar konaCommonTest.jar test
-./konaCommonTest-linuxX64 test
+java -jar bin/konaCommonTest.jar test
+./bin/konaCommonTest-linuxX64 test
 # (or some binalies for each build-available arch)
 ```
 
@@ -191,11 +191,11 @@ sudo apt install gcc-mingw-w64-x86-64
 ./gradlew cli:deploy
 
 # Convert a directory to an archive
-./konaArchive pack sample1Res.kona sample1/src/res
+java -jar bin/konaArchive.jar pack sample1Res.kona sample1/src/res
 
 # List the contents of an archive
-./konaArchive list sample1Res.kona
+java -jar bin/konaArchive.jar list sample1Res.kona
 
 # Extract an archive
-./konaArchive extract sample1Res.kona /tmp/sample1Res
+java -jar bin/konaArchive.jar extract sample1Res.kona /tmp/sample1Res
 ```

@@ -7,7 +7,7 @@
 - ベンチマーク機構は再発明することになる
   - 競合製品のソースコードを参考にすること
   - kotlinx-benchmarkはGradleに重依存しているので使えない。
-- deploy タスクで konaBenchmark なんたらをルートプロジェクトにコピーしてchmod する
+- deploy タスクで konaBenchmark なんたらをルートプロジェクトの bin にコピーしてchmod する
 - それらのバイナリはGitHub workflow で使うのでリポジトリに追加する
   - benchmark:deploy を実行したときだけ更新する
 

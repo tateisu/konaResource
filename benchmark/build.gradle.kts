@@ -113,21 +113,21 @@ val fatJar = tasks.register<Jar>("konaBenchmarkFatJar") {
 
 tasks.register("deploy", DeployKonaNativeBinariesTask::class.java) {
     group = "build"
-    description = "Copies release benchmark binaries to the root project"
+    description = "Copies release benchmark binaries to rootProject/bin"
     dependsOn(fatJar)
     jarFile.set(fatJar.flatMap { it.archiveFile })
     availableNativeTargets.forEach { target ->
         val suffix = target.targetName.replaceFirstChar { it.uppercase() }
         dependsOn("linkReleaseExecutable$suffix")
     }
-    destinationDirectory.set(rootProject.layout.projectDirectory)
+    destinationDirectory.set(rootProject.layout.projectDirectory.dir("bin"))
     deployedFiles.from(
-        rootProject.file("konaBenchmark.jar"),
+        rootProject.file("bin/konaBenchmark.jar"),
         availableNativeTargets.map { target ->
             val suffix = target.targetName.replaceFirstChar { it.uppercase() }
             val binaryFile = tasks.named<KotlinNativeLink>("linkReleaseExecutable$suffix").get().outputFile.get()
             val extension = binaryFile.extension.takeIf { it.isNotEmpty() && it != "kexe" }?.let { ".$it" } ?: ""
-            rootProject.file("konaBenchmark-${target.targetName}$extension")
+            rootProject.file("bin/konaBenchmark-${target.targetName}$extension")
         },
     )
     binaryFiles.from(

@@ -23,9 +23,9 @@ tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJ
 }
 
 tasks.register<Copy>("deploy") {
-    description = "copy cli fatJar to rootProject dir"
+    description = "copy cli fatJar to rootProject/bin"
     dependsOn(tasks.named("shadowJar"))
     from(tasks.named<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadowJar"))
-    into(rootProject.layout.projectDirectory)
+    into(rootProject.layout.projectDirectory.dir("bin"))
     rename { "konaArchive.jar" }
 }

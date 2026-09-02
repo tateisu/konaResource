@@ -112,7 +112,7 @@ abstract class CommonJniBuildTask : DefaultTask() {
 }
 
 /**
- * ルートプロジェクトへコピーするネイティブバイナリの表示名とファイル名。
+ * ルートプロジェクトの bin へコピーするネイティブバイナリの表示名とファイル名。
  */
 data class DeployBinarySpec(
     val displayName: String,
@@ -120,7 +120,7 @@ data class DeployBinarySpec(
 ) : java.io.Serializable
 
 /**
- * konaCommonTest の FatJar とネイティブ実行可能バイナリをルートプロジェクトへコピーする。
+ * konaCommonTest の FatJar とネイティブ実行可能バイナリをルートプロジェクトの bin へコピーする。
  * config cache 対応のため、Project やタスクへの参照は実行時に使わない。
  */
 abstract class DeployKonaCommonTestTask : DefaultTask() {

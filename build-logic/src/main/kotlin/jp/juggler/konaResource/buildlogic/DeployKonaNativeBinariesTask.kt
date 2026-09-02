@@ -18,7 +18,7 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
-/** Copies standalone Kotlin/Native binaries to the root project. */
+/** Copies standalone Kotlin/Native binaries to the root project's bin directory. */
 abstract class DeployKonaNativeBinariesTask : DefaultTask() {
     @get:InputFiles
     @get:PathSensitive(PathSensitivity.RELATIVE)

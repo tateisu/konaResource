@@ -2,6 +2,7 @@
 - Updated GitHub Actions to the latest major versions: `actions/checkout@v7`, `actions/setup-java@v6`, `actions/cache@v6`, and `gradle/actions/setup-gradle@v6`.
 - The `jp.juggler.konaResource.local` Gradle plugin marker is now excluded from Maven Central publications while remaining available from `localMaven`.
 - Updated the README to reflect Linux ARM support and renamed the plugin configuration section.
+- Deploy CLI jars and native binaries to the project root's `bin/` directory.
 
 ## v0.1.6
 - `KonaArchive` data schema version 2. digest hash is changed from SHA-256 to BLAKE3-256.
