@@ -147,6 +147,10 @@ abstract class GenerateKonaResourceTask @Inject constructor(
                     .incbin "${archiveFile.name}"
                     .global ${symbol}_end
                     ${symbol}_end:
+                    #if defined(_WIN32)
+                    .section .drectve
+                    .ascii " -export:${symbol}_start -export:${symbol}_end"
+                    #endif
                 """.trimIndent() + "\n",
             )
             val objectFile = output.resolve("$safeName.o")
