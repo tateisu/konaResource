@@ -59,10 +59,7 @@ fun JniBuildTarget.registerJniBuild() {
     val registeredTask = when (this) {
         JniBuildTarget.LinuxX64 -> registerJniBuild(
             sources = commonSources + x86AsmSources,
-            cflags = listOf(
-                "-Wall", "-Wextra", "-O3", "-fPIC",
-                "-mavx", "-mavx2", "-mavx512f", "-mavx512vl",
-            ),
+            cflags = listOf("-Wall", "-Wextra", "-O3", "-fPIC"),
             linkFlags = listOf("-shared"),
         )
 
@@ -92,10 +89,7 @@ fun JniBuildTarget.registerJniBuild() {
 
         JniBuildTarget.MacosX64 -> registerJniBuild(
             sources = commonSources + x86AsmSources,
-            cflags = listOf(
-                "-Wall", "-Wextra", "-O3", "-fPIC",
-                "-mavx", "-mavx2", "-mavx512f", "-mavx512vl",
-            ),
+            cflags = listOf("-Wall", "-Wextra", "-O3", "-fPIC"),
             linkFlags = listOf("-shared"),
         )
 
