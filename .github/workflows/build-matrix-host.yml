@@ -1,0 +1,98 @@
+name: build matrix - host
+
+on:
+  workflow_call:
+    inputs:
+      host:
+        required: true
+        type: string
+      runner:
+        required: true
+        type: string
+      test_task:
+        required: false
+        default: ""
+        type: string
+      benchmark_task:
+        required: false
+        default: ""
+        type: string
+      sample2_tasks:
+        required: true
+        type: string
+      sample2_targets:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ inputs.host }}
+    runs-on: ${{ inputs.runner }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Set up Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install Linux cross compilers
+        if: inputs.host == 'LinuxX64'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes clang gcc-aarch64-linux-gnu gcc-mingw-w64-x86-64
+
+      - name: Publish local dependencies
+        run: ./gradlew --no-daemon --max-workers=1 publishLocalMaven
+
+      - name: Build test, benchmark, and sample2
+        env:
+          TEST_TASK: ${{ inputs.test_task }}
+          BENCHMARK_TASK: ${{ inputs.benchmark_task }}
+          SAMPLE2_TASKS: ${{ inputs.sample2_tasks }}
+        run: |
+          tasks=()
+          if [[ -n "$TEST_TASK" ]]; then tasks+=(":test:$TEST_TASK"); fi
+          if [[ -n "$BENCHMARK_TASK" ]]; then tasks+=(":benchmark:$BENCHMARK_TASK"); fi
+          for task in $SAMPLE2_TASKS; do tasks+=(":sample2:$task"); done
+          ./gradlew --no-daemon --max-workers=1 "${tasks[@]}"
+
+      - name: Collect build results
+        env:
+          HOST: ${{ inputs.host }}
+          TEST_TASK: ${{ inputs.test_task }}
+          BENCHMARK_TASK: ${{ inputs.benchmark_task }}
+          SAMPLE2_TARGETS: ${{ inputs.sample2_targets }}
+        run: |
+          result_dir="workflowResult/$HOST"
+          mkdir -p "$result_dir/test" "$result_dir/benchmark" "$result_dir/sample2"
+          if [[ -n "$TEST_TASK" ]]; then
+            test_target="${TEST_TASK#linkDebugExecutable}"
+            test_target="${test_target,}${test_target:1}"
+            cp test/build/bin/"$test_target"/debugExecutable/konaCommonTest* "$result_dir/test/"
+          fi
+          if [[ -n "$BENCHMARK_TASK" ]]; then
+            benchmark_target="${BENCHMARK_TASK#linkReleaseExecutable}"
+            benchmark_target="${benchmark_target,}${benchmark_target:1}"
+            cp benchmark/build/bin/"$benchmark_target"/releaseExecutable/konaBenchmark* "$result_dir/benchmark/"
+          fi
+          for target in $SAMPLE2_TARGETS; do
+            target_dir="${target,}${target:1}"
+            mkdir -p "$result_dir/sample2/$target"
+            cp sample2/build/bin/"$target_dir"/debugExecutable/sample2* "$result_dir/sample2/$target/"
+          done
+
+      - name: Upload build results
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-matrix-${{ inputs.host }}
+          path: workflowResult/${{ inputs.host }}
+          if-no-files-found: error
