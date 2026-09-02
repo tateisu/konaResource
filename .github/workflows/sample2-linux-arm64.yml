@@ -18,6 +18,8 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
+      - name: Check ARM cross compiler
+        run: aarch64-linux-gnu-gcc --version
       - name: Build sample2
         run: |
           ./gradlew --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx2g publishLocalMaven
@@ -27,6 +29,13 @@ jobs:
         with:
           name: sample2-linux-arm64
           path: sample2/build/bin/linuxArm64/debugExecutable/sample2.kexe
+      - name: Upload JVM crash log
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: sample2-linux-arm64-crash-log
+          path: hs_err_pid*.log
+          if-no-files-found: ignore
 
   sample2-linux-arm64:
     name: Linux arm64
