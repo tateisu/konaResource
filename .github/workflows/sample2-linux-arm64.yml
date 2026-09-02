@@ -20,8 +20,8 @@ jobs:
           java-version: "21"
       - name: Build sample2
         run: |
-          ./gradlew publishLocalMaven
-          ./gradlew :sample2:linkDebugExecutableLinuxArm64
+          ./gradlew --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx2g publishLocalMaven
+          ./gradlew --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx2g :sample2:linkDebugExecutableLinuxArm64
       - name: Upload sample2
         uses: actions/upload-artifact@v4
         with:
