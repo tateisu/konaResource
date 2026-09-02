@@ -143,13 +143,10 @@ abstract class GenerateKonaResourceTask @Inject constructor(
                     .section .rodata
                     .balign 8
                     .global ${symbol}_start
-                    .type ${symbol}_start, @object
                     ${symbol}_start:
                     .incbin "${archiveFile.name}"
                     .global ${symbol}_end
-                    .type ${symbol}_end, @object
                     ${symbol}_end:
-                    .size ${symbol}_start, ${symbol}_end-${symbol}_start
                 """.trimIndent() + "\n",
             )
             val objectFile = output.resolve("$safeName.o")
