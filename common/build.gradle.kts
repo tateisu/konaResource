@@ -118,14 +118,27 @@ tasks.named<ProcessResources>("jvmProcessResources") {
         }
     }
 
-    if (JniBuildTarget.MacosX64 in availableTargets &&
-        JniBuildTarget.MacosArm64 in availableTargets
-    ) {
-        dependsOn(":commonJni:buildBlake3JniMacosUniversal2")
-    } else {
-        dependsOn(":commonJni:collectJniFromWorkflowResult")
+    val macosTargets = listOf(JniBuildTarget.MacosArm64, JniBuildTarget.MacosX64)
+    val macosLibrary = when {
+        macosTargets.all { it in availableTargets } -> {
+            dependsOn(":commonJni:buildBlake3JniMacosUniversal2")
+            rootProject.file("commonJni/build/native/macosUniversal2/libkona_common_jni.dylib")
+        }
+
+        else -> {
+            val hostMacosTarget = macosTargets.firstOrNull { it in availableTargets }
+            if (hostMacosTarget == null) {
+                dependsOn(":commonJni:collectJniFromWorkflowResult")
+                rootProject.file("commonJni/build/native/macosUniversal2/libkona_common_jni.dylib")
+            } else {
+                dependsOn(":commonJni:buildBlake3Jni${hostMacosTarget.buildName.replaceFirstChar { it.uppercase() }}")
+                rootProject.file(
+                    "commonJni/build/native/${hostMacosTarget.buildName}/${hostMacosTarget.libraryName}",
+                )
+            }
+        }
     }
-    from(rootProject.file("commonJni/build/native/macosUniversal2/libkona_common_jni.dylib")) {
+    from(macosLibrary) {
         into("jp/juggler/konaArchive/native/macos-universal")
     }
 }
