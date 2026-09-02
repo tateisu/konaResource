@@ -74,7 +74,7 @@ jobs:
             --output /tmp/microsoft-jdk-macos-aarch64.tar.gz
           gtar --extract --gzip --file /tmp/microsoft-jdk-macos-aarch64.tar.gz \
             --directory /tmp/microsoft-jdk-macos-aarch64
-          cp -R /tmp/microsoft-jdk-macos-aarch64/jdk-*/include jdk/MacosArm64/
+          cp -R /tmp/microsoft-jdk-macos-aarch64/jdk-*/Contents/Home/include jdk/MacosArm64/
 
       - name: Download macOS x64 JDK headers
         if: inputs.host == 'MacosArm64'
@@ -86,7 +86,7 @@ jobs:
             --output /tmp/microsoft-jdk-macos-x64.tar.gz
           gtar --extract --gzip --file /tmp/microsoft-jdk-macos-x64.tar.gz \
             --directory /tmp/microsoft-jdk-macos-x64
-          cp -R /tmp/microsoft-jdk-macos-x64/jdk-*/include jdk/MacosX64/
+          cp -R /tmp/microsoft-jdk-macos-x64/jdk-*/Contents/Home/include jdk/MacosX64/
 
       - name: Build common-jvm jar
         run: ./gradlew --no-daemon --max-workers=1 :common:jvmJar
