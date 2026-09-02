@@ -7,7 +7,6 @@ import jp.juggler.konaArchive.util.fileType
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.pointed
 import kotlinx.cinterop.toKString
-import platform.posix.EEXIST
 import platform.posix.ENOENT
 import platform.posix.closedir
 import platform.posix.errno
@@ -81,9 +80,7 @@ internal object KonaArchiveTestUtilsPosix : KonaArchiveTestUtils {
         if (path.isEmpty() || path == "/") return
         val parent = path.substringBeforeLast('/', "")
         if (parent.isNotEmpty() && parent != path) makeDirectory(parent)
-        if (mkdirWithUserRwxPermission(path) != 0 && errno != EEXIST) {
-            throw ErrnoException("Unable to create directory: $path")
-        }
+        mkdirWithUserRwxPermission(path)
     }
 
     override fun tempDirectory(name: String): String {
