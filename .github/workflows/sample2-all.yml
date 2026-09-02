@@ -1,0 +1,20 @@
+name: sample2 - all platforms
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-x64:
+    name: Linux x64
+    uses: ./.github/workflows/sample2-linux-x64.yml
+
+  linux-arm64:
+    name: Linux arm64
+    uses: ./.github/workflows/sample2-linux-arm64.yml
+
+  windows-x64:
+    name: Windows x64
+    uses: ./.github/workflows/sample2-windows-x64.yml
