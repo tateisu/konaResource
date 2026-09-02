@@ -26,9 +26,17 @@ import java.util.Locale
 import javax.inject.Inject
 
 private fun compilerForTarget(targetName: String): String = when (targetName.lowercase(Locale.ROOT)) {
+    "linuxx64" -> if (System.getProperty("os.name").lowercase(Locale.ROOT).contains("mac")) {
+        "clang"
+    } else {
+        "cc"
+    }
+
     "linuxarm64" -> "clang"
     "mingwx64" -> if (System.getProperty("os.name").lowercase(Locale.ROOT).contains("windows")) {
         "cc"
+    } else if (System.getProperty("os.name").lowercase(Locale.ROOT).contains("mac")) {
+        "clang"
     } else {
         "x86_64-w64-mingw32-gcc"
     }
@@ -105,8 +113,20 @@ class KonaResourcePlugin : Plugin<Project> {
                             project.layout.buildDirectory.dir("generated/konaResource/${target.name}"),
                         )
                         task.compiler.set(compilerForTarget(target.name))
-                        if (target.name.equals("linuxArm64", ignoreCase = true)) {
-                            task.compilerArgs.set(listOf("--target=aarch64-linux-gnu"))
+                        when {
+                            target.name.equals("linuxX64", ignoreCase = true) &&
+                                System.getProperty("os.name").lowercase(Locale.ROOT).contains("mac") -> {
+                                task.compilerArgs.set(listOf("--target=x86_64-linux-gnu"))
+                            }
+
+                            target.name.equals("linuxArm64", ignoreCase = true) -> {
+                                task.compilerArgs.set(listOf("--target=aarch64-linux-gnu"))
+                            }
+
+                            target.name.equals("mingwX64", ignoreCase = true) &&
+                                System.getProperty("os.name").lowercase(Locale.ROOT).contains("mac") -> {
+                                task.compilerArgs.set(listOf("--target=x86_64-w64-windows-gnu"))
+                            }
                         }
                     }
                     target.binaries.all { binary ->

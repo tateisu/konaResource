@@ -13,6 +13,7 @@
 - Renamed the bundled common JNI libraries to `kona_common_jni`.
 - Fixed Kotlin/Native resource embedding for macOS Mach-O targets.
 - macOS JVM artifacts now use the host-architecture JNI library when universal2 is unavailable.
+- macOS cross-target resource objects now use target-specific clang triples.
 
 ## v0.1.6
 - `KonaArchive` data schema version 2. digest hash is changed from SHA-256 to BLAKE3-256.
