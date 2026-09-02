@@ -45,10 +45,16 @@ include(
     ":benchmark",
 )
 
-// publishPluginLocalはsample2のplugin markerを生成する前に実行されるため、
-// publish処理中だけsample2を設定対象から外す。
-if (gradle.startParameter.taskNames.none {
-        it.substringAfterLast(':') in setOf("publishPluginLocal", "publishLocalMaven")
-    }) {
-    include(":sample2")
+// sample2はlocalMavenに公開したpluginを使うため、localMavenがある場合だけ設定対象にする。
+// publish処理中はmarker生成前に設定されるため、さらにsample2を外す。
+val localMavenAvailable = file("$rootDir/localMaven").isDirectory
+val isLocalPublishing = gradle.startParameter.taskNames.any {
+    it.substringAfterLast(':') in setOf("publishPluginLocal", "publishLocalMaven")
+}
+when {
+    !localMavenAvailable -> println("[konaResource] Skipping :sample2 because localMaven/ was not found.")
+    isLocalPublishing -> println("[konaResource] Skipping :sample2 while publishing the local plugin.")
+    else -> {
+        include(":sample2")
+    }
 }

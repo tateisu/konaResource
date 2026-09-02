@@ -11,7 +11,7 @@ plugins {
 }
 
 group = "jp.juggler.konaResource"
-version = "0.1.5"
+version = "0.1.6"
 
 val detektFormatting = libs.detektFormatting
 val localMavenDirectory = layout.projectDirectory.dir("localMaven")
