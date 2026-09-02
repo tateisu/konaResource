@@ -49,13 +49,17 @@ val hostRunTask = when {
         System.getProperty("os.arch").lowercase() in setOf("amd64", "x86_64", "x64") ->
         "runDebugExecutableLinuxX64"
 
-    else -> throw GradleException(
-        "sample1:runDebug supports Linux x64 hosts only",
-    )
+    else -> null
 }
 
 tasks.register("runDebug") {
     group = "run"
     description = "Runs sample1 for the host architecture."
-    dependsOn(hostRunTask)
+    if (hostRunTask != null) {
+        dependsOn(hostRunTask)
+    } else {
+        doFirst {
+            throw GradleException("sample1:runDebug supports Linux x64 hosts only")
+        }
+    }
 }
