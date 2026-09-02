@@ -42,10 +42,9 @@ enum class JniBuildTarget(
      */
     private fun isCompilerAvailable(compiler: String): Boolean {
         val pathEntries = System.getenv("PATH")?.split(File.pathSeparator) ?: return false
-        val compilerNames = if (System.getProperty("os.name").lowercase().contains("windows")) {
-            listOf(compiler, "$compiler.exe")
-        } else {
-            listOf(compiler)
+        val compilerNames = when {
+            getKonaBuildHost().isWindows -> listOf(compiler, "$compiler.exe")
+            else -> listOf(compiler)
         }
         return pathEntries.any { dir -> compilerNames.any { File(dir, it).canExecute() } }
     }
@@ -54,12 +53,9 @@ enum class JniBuildTarget(
      * Windows x64ホストでは、ホストのMinGW compilerでWindows x64向けJNIをビルドする。
      * Linuxなどからのクロスビルドでは、ターゲット用compilerを使う。
      */
-    fun compilerForHost(): String = if (
-        name == "WindowsX64" && System.getProperty("os.name").lowercase().contains("windows")
-    ) {
-        "gcc"
-    } else {
-        compiler
+    fun compilerForHost(): String = when {
+        getKonaBuildHost() == KonaBuildHost.WindowsX64 && this == WindowsX64 -> "gcc"
+        else -> compiler
     }
 
     /**
@@ -85,20 +81,14 @@ enum class JniBuildTarget(
      * enum要素が現在のホストと同一アーキなら真
      */
     private fun isHostTarget(): Boolean {
-        val hostOs = System.getProperty("os.name").lowercase()
-        val targetOsMatches = when {
-            name.startsWith("Linux") -> hostOs.contains("linux")
-            name.startsWith("Windows") -> hostOs.contains("windows")
-            isMacos -> hostOs.contains("mac") || hostOs.contains("darwin")
-            else -> false
-        }
-        if (!targetOsMatches) return false
-
-        val hostArch = System.getProperty("os.arch").lowercase()
-        return if (name.endsWith("X64")) {
-            hostArch in setOf("amd64", "x86_64", "x64")
-        } else {
-            hostArch in setOf("aarch64", "arm64")
+        val host = getKonaBuildHost()
+        return when (this) {
+            LinuxX64 -> host == KonaBuildHost.LinuxX64
+            LinuxArm64 -> false
+            WindowsX64 -> host == KonaBuildHost.WindowsX64
+            WindowsArm64 -> false
+            MacosX64 -> host == KonaBuildHost.MacosX64
+            MacosArm64 -> host == KonaBuildHost.MacosArm64
         }
     }
 }

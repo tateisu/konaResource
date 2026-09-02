@@ -9,8 +9,7 @@ import java.io.File
  * - それ以外は osxcross が導入済みなら可能
  */
 fun macosBuildAvailable(): Boolean {
-    val osName = System.getProperty("os.name").lowercase()
-    if (osName.contains("mac") || osName.contains("darwin")) return true
+    if (getKonaBuildHost().isMacos) return true
     val osxcrossRoot = System.getenv("OSXCROSS_ROOT")
         ?: File(System.getProperty("user.home"), "osxcross").path
     return File(osxcrossRoot, "target").isDirectory

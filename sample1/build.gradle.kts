@@ -1,4 +1,8 @@
+import jp.juggler.konaResource.buildlogic.KonaBuildHost
+import jp.juggler.konaResource.buildlogic.getKonaBuildHost
+
 plugins {
+    id("jp.juggler.konaResource.buildlogic")
     alias(libs.plugins.kotlinMultiplatform)
     // =======================================
     // --- konaResource plugin ---
@@ -44,11 +48,8 @@ kotlin {
     }
 }
 
-val hostRunTask = when {
-    System.getProperty("os.name").lowercase().contains("linux") &&
-        System.getProperty("os.arch").lowercase() in setOf("amd64", "x86_64", "x64") ->
-        "runDebugExecutableLinuxX64"
-
+val hostRunTask = when (getKonaBuildHost()) {
+    KonaBuildHost.LinuxX64 -> "runDebugExecutableLinuxX64"
     else -> null
 }
 

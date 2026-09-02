@@ -1,4 +1,6 @@
+import jp.juggler.konaResource.buildlogic.availableKonaBuildTarget
 import jp.juggler.konaResource.buildlogic.konaTargets
+import jp.juggler.konaResource.buildlogic.getKonaBuildHost
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 plugins {
@@ -32,28 +34,20 @@ kotlin {
  * Gradleを実行しているホストのアーキテクチャを返す
  * - sample2 の runDebugExecutable{...} タスクにマッチする名前
  */
-val hostArch: String by lazy {
-    when {
-        System.getProperty("os.name").lowercase().contains("linux") ->
-            when (val arch = System.getProperty("os.arch").lowercase()) {
-                in setOf("amd64", "x86_64", "x64") -> "LinuxX64"
-                in setOf("aarch64", "arm64") -> "LinuxArm64"
-                else -> error("host is Linux, but os.arch is unexpected. [$arch]")
-            }
-
-        System.getProperty("os.name").lowercase().contains("windows") &&
-            System.getProperty("os.arch").lowercase() in setOf("amd64", "x86_64", "x64") -> "MingwX64"
-
-        System.getProperty("os.name").lowercase().contains("mac") &&
-            System.getProperty("os.arch").lowercase() in setOf("aarch64", "arm64") -> "MacosArm64"
-
-        else -> error("Unsupported host platform. os.name=${System.getProperty("os.name")}, os.arch=${System.getProperty("os.arch")}")
-    }
+val hostRunTask: String by lazy {
+    val host = getKonaBuildHost()
+    val target = availableKonaBuildTarget().firstOrNull {
+        it.targetName.equals(host.targetName, ignoreCase = true)
+    } ?: error(
+        "Kotlin/Native target for host is unavailable. " +
+            "host=${host.targetName}, available=${availableKonaBuildTarget().joinToString { it.targetName }}",
+    )
+    "runDebugExecutable${target.targetName.replaceFirstChar { it.uppercase() }}"
 }
 
 
 tasks.register("runDebug") {
     group = "run"
     description = "Runs sample2 for the host architecture."
-    dependsOn("runDebugExecutable${hostArch}")
+    dependsOn(hostRunTask)
 }

@@ -1,6 +1,7 @@
 import jp.juggler.konaResource.buildlogic.DeployBinarySpec
 import jp.juggler.konaResource.buildlogic.DeployKonaCommonTestTask
 import jp.juggler.konaResource.buildlogic.availableKonaBuildTarget
+import jp.juggler.konaResource.buildlogic.getKonaBuildHost
 import jp.juggler.konaResource.buildlogic.konaTargets
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.JavaExec
@@ -20,21 +21,7 @@ version = rootProject.version
 
 val availableKonaBuildTargets = availableKonaBuildTarget()
 
-val hostArch: String by lazy {
-    val osName = System.getProperty("os.name").lowercase()
-    val osArch = System.getProperty("os.arch").lowercase()
-    when {
-        osName.contains("linux") -> when (osArch) {
-            "amd64", "x86_64", "x64" -> "LinuxX64"
-            "aarch64", "arm64" -> "LinuxArm64"
-            else -> error("host is Linux, but os.arch is unexpected. [$osArch]")
-        }
-
-        osName.contains("windows") && osArch in setOf("amd64", "x86_64", "x64") -> "MingwX64"
-        osName.contains("mac") && osArch in setOf("aarch64", "arm64") -> "MacosArm64"
-        else -> error("Unsupported host platform. os.name=[$osName], os.arch=[$osArch]")
-    }
-}
+val hostArch: String by lazy { getKonaBuildHost().targetName }
 
 kotlin {
     konaTargets()
