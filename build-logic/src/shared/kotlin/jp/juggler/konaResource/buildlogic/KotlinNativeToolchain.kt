@@ -26,11 +26,15 @@ private class NativeToolchain(private val home: File) {
 
     val kotlincNative: File by lazy { findExecutable("kotlinc-native") }
 
-    private fun findExecutable(name: String): File = sequenceOf(
-        File(home, "bin/$name"),
-        File(home, "bin/$name.bat"),
-    ).firstOrNull(File::isFile)
-        ?: error("Kotlin/Native executable '$name' was not found under $home")
+    private fun findExecutable(name: String): File {
+        val candidates = if (System.getProperty("os.name").contains("windows", ignoreCase = true)) {
+            sequenceOf(File(home, "bin/$name.bat"), File(home, "bin/$name"))
+        } else {
+            sequenceOf(File(home, "bin/$name"), File(home, "bin/$name.bat"))
+        }
+        return candidates.firstOrNull(File::isFile)
+            ?: error("Kotlin/Native executable '$name' was not found under $home")
+    }
 }
 
 private val nativeToolchainCache = ConcurrentHashMap<String, Lazy<NativeToolchain?>>()

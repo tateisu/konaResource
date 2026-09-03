@@ -66,9 +66,13 @@ abstract class CommonJniBuildTask : DefaultTask() {
             val unitDirectory = File(workDirectory, "unit$index").apply { mkdirs() }
             val objects = unit.sources.map { source ->
                 val objectFile = File(unitDirectory, "${source.name}.o")
+                // run_konan consumes bare -D options as its own arguments; pass defines through clang explicitly.
+                val compilerFlags = unit.cflags.map { flag ->
+                    if (flag.startsWith("-D")) "-Xclang=$flag" else flag
+                }
                 exec(
                     unit.compilerCommand,
-                    unit.cflags +
+                    compilerFlags +
                         listOf("-c", source.absolutePath) +
                         includeArgs +
                         listOf("-o", objectFile.absolutePath),

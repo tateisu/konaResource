@@ -18,6 +18,7 @@
 - macOS cross-target resource objects now use target-specific clang triples.
 - Platform-specific test directory creation now has a common success/error contract.
 - Common JVM jar workflows now bootstrap the matching Kotlin/Native distribution and its dependencies before configuration.
+- JNI clang defines now pass through Kotlin/Native's `run_konan` wrapper correctly.
 
 ## v0.1.6
 - `KonaArchive` data schema version 2. digest hash is changed from SHA-256 to BLAKE3-256.
