@@ -8,7 +8,7 @@
 | LinuxX64    | ✅       | ✅         | ✅       | ❌[A]    | ❌[A]      |
 | MacosArm64  | ❓       | ❓         | ❓       | ✅       | ✅         |
 | MacosX64    | ❓       | ❓         | ❓       | ✅       | ✅         |
-| WindowsX64  | ❓       | ❓         | ✅       | ❓       | ❓         |
+| WindowsX64  | ✅       | ✅         | ✅       | ❌[A]    | ❌[A]      |
 
 - ✅ は `run_konan` と JNI ヘッダが利用可能なターゲット
 - ❌ は現在の Kotlin/Native distribution では利用できないターゲット。角括弧内は理由の注釈番号
@@ -16,7 +16,7 @@
 
 ❌ セルの注釈:
 
-- [A] LinuxX64 host の `kotlinc-native -list-targets` に macOS target が含まれない
+- [A] LinuxX64/WindowsX64 host の `kotlinc-native -list-targets` に macOS target が含まれない
 
 利用可能なターゲットは以下で確認できる。
 
