@@ -43,8 +43,7 @@ jobs:
             --directory /tmp/microsoft-jdk-linux-aarch64
           cp -R /tmp/microsoft-jdk-linux-aarch64/jdk-*/include jdk/LinuxArm64/
 
-      - name: Download Linux x64 JDK headers for Windows host
-        if: inputs.host == 'WindowsX64'
+      - name: Download Linux x64 JDK headers
         run: |
           mkdir -p jdk/LinuxX64
           mkdir -p /tmp/microsoft-jdk-linux-x64
