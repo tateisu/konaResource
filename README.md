@@ -48,6 +48,10 @@ konaResource{
     lz4AutoFlush = false
     lz4FavorDecSpeed = true
 
+    // Skip embedding for selected Kotlin/Native targets.
+    // The target name is e.g. "linuxX64" or "macosArm64".
+    skipEmbedIf { targetName -> targetName == "macosArm64" }
+
     // Used for the .o file name and symbol name
     val name1 = "resources"
     // Input directory for the resource archive

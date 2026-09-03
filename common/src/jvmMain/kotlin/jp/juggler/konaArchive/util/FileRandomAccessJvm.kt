@@ -4,9 +4,10 @@ package jp.juggler.konaArchive.util
 
 import java.io.File
 import java.io.RandomAccessFile
+import java.nio.ByteBuffer
 
 class FileRandomAccess private constructor(
-    private val access: RandomAccessFile,
+    private val sharedAccess: SharedAccess,
     // subRangeで使われる
     val file: File,
     // 読み込み専用なら真
@@ -20,7 +21,7 @@ class FileRandomAccess private constructor(
         file: File,
         isReadOnly: Boolean = false,
     ) : this(
-        access = RandomAccessFile(file, if (isReadOnly) "r" else "rw"),
+        sharedAccess = SharedAccess(file, isReadOnly),
         file = file,
         isReadOnly = isReadOnly,
         baseOffset = 0L,
@@ -28,28 +29,26 @@ class FileRandomAccess private constructor(
     )
 
     override val size: Long
-        get() = access.length().minus(baseOffset)
+        get() = sharedAccess.channel.size().minus(baseOffset)
             .coerceAtMost(clipSize ?: Long.MAX_VALUE)
 
     override fun seek(offset: Long) {
+        checkOpen()
         pos = offset.coerceIn(0L, size)
-        // 実際にseekするのはread/write時
     }
 
+    @Synchronized
     override fun close() {
-        access.close()
-    }
-
-    private fun seekImpl() {
-        val rawPosition = baseOffset + pos
-        if (access.filePointer != rawPosition) {
-            access.seek(rawPosition)
+        if (!closed) {
+            closed = true
+            sharedAccess.release()
         }
     }
 
     override fun truncate() {
         if (isReadOnly) error("stream is read-only.")
-        access.setLength(baseOffset + pos)
+        checkOpen()
+        sharedAccess.channel.truncate(baseOffset + pos)
         pos = pos.coerceAtMost(size)
     }
 
@@ -62,9 +61,13 @@ class FileRandomAccess private constructor(
         b.checkRange(start, end)
         val length = end - start
         if (length > 0) {
-            seekImpl()
-            access.write(b, start, length)
-            pos += length
+            checkOpen()
+            val source = ByteBuffer.wrap(b, start, length)
+            while (source.hasRemaining()) {
+                val written = sharedAccess.channel.write(source, baseOffset + pos)
+                if (written <= 0) error("failed to write file")
+                pos += written
+            }
         }
     }
 
@@ -79,12 +82,12 @@ class FileRandomAccess private constructor(
         return when {
             length <= 0 -> 0
             else -> {
+                checkOpen()
+                val destination = ByteBuffer.wrap(b, start, length)
                 var nRead = 0
-                while (nRead < length) {
-                    val remaining = length - nRead
-                    seekImpl()
-                    val result = access.read(b, start + nRead, remaining)
-                    if (result <= 0) return nRead
+                while (destination.hasRemaining()) {
+                    val result = sharedAccess.channel.read(destination, baseOffset + pos)
+                    if (result <= 0) break
                     nRead += result
                     pos += result
                 }
@@ -97,14 +100,54 @@ class FileRandomAccess private constructor(
         start: Long,
         end: Long,
     ): FileRandomAccess {
+        checkOpen()
         require(start in 0L..end && end <= size) { "sub range not valid. [$start, $end) / [0,$size)" }
-        return FileRandomAccess(
-            access = RandomAccessFile(file, "r"),
-            file = file,
-            isReadOnly = true,
-            baseOffset = baseOffset + start,
-            clipSize = end - start,
-        )
+        sharedAccess.retain()
+        return try {
+            FileRandomAccess(
+                sharedAccess = sharedAccess,
+                file = file,
+                isReadOnly = true,
+                baseOffset = baseOffset + start,
+                clipSize = end - start,
+            )
+        } catch (ex: Throwable) {
+            sharedAccess.release()
+            throw ex
+        }
+    }
+
+    private var closed = false
+
+    private fun checkOpen() {
+        check(!closed) { "stream is closed." }
+    }
+
+    private class SharedAccess(
+        file: File,
+        isReadOnly: Boolean,
+    ) {
+        val randomAccessFile = RandomAccessFile(file, if (isReadOnly) "r" else "rw")
+        val channel = randomAccessFile.channel
+
+        private var references = 1
+        private var closed = false
+
+        @Synchronized
+        fun retain() {
+            check(!closed) { "stream is closed." }
+            references++
+        }
+
+        @Synchronized
+        fun release() {
+            if (references == 0) return
+            references--
+            if (references == 0) {
+                closed = true
+                randomAccessFile.close()
+            }
+        }
     }
 
     companion object {

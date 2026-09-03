@@ -29,7 +29,7 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - name: Publish local dependencies
+      - name: publishLocalMaven
         run: ./gradlew --no-daemon --max-workers=1 publishLocalMaven
 
       - name: Build all
@@ -64,19 +64,19 @@ jobs:
               printf 'No executable found: %s/%s/%s.{kexe,exe}\n' "$module" "$configuration" "$executable_name" >&2
             fi
           }
-          result_dir="workflowResult/$HOST"
+          result_dir="nativeBinaries/$HOST"
           mkdir -p "$result_dir/test" "$result_dir/benchmark" "$result_dir/sample2" "$result_dir/empty"
+          copy_executables empty debugExecutable empty empty
+          copy_executables sample2 debugExecutable sample2 sample2
           copy_executables test debugExecutable konaCommonTest test
           copy_executables benchmark releaseExecutable konaBenchmark benchmark
-          copy_executables sample2 debugExecutable sample2 sample2
-          copy_executables empty debugExecutable empty empty
 
       - name: Upload build results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build-matrix-${{ inputs.host }}
-          path: workflowResult/${{ inputs.host }}
+          name: nativeBinaries-${{ inputs.host }}
+          path: nativeBinaries/${{ inputs.host }}
           if-no-files-found: warn
 
       - name: Report build failure

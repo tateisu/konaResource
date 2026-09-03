@@ -1,5 +1,6 @@
 import io.gitlab.arturbosch.detekt.Detekt
 import io.gitlab.arturbosch.detekt.extensions.DetektExtension
+import org.gradle.api.tasks.Copy
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform) apply false
@@ -114,4 +115,18 @@ val publishLocalMaven = tasks.register("publishLocalMaven") {
         // public marker
         ":plugin:publishKonaResourceLocalPluginMarkerMavenPublicationToLocalMavenRepository",
     )
+}
+
+// Replace host-limited common Native publications with the publications
+// collected from every Kotlin/Native build host before Nmcp stages them.
+val workflowCommonMaven = layout.projectDirectory.dir("workflowResult/MacosArm64/maven")
+val installWorkflowCommonNativePublications = tasks.register<Copy>("installWorkflowCommonNativePublications") {
+    enabled = workflowCommonMaven.asFile.isDirectory
+    dependsOn(":common:publishAllPublicationsToNmcpRepository")
+    from(workflowCommonMaven)
+    into(layout.projectDirectory.dir("common/build/nmcp/m2"))
+}
+
+tasks.named("publishAggregationToCentralPortal") {
+    dependsOn(installWorkflowCommonNativePublications)
 }

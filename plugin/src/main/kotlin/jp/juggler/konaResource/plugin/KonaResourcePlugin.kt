@@ -52,6 +52,7 @@ class KonaResourcePlugin : Plugin<Project> {
 private fun KotlinNativeTarget.updateBuild(extension: KonaResourceExtension) {
     val target = this
     val targetName = target.name.replaceFirstChar { it.uppercase() }
+    val skipEmbed = extension.shouldSkipEmbed(target.name)
     val targetGenerate = project.tasks.register(
         "generateKonaResource$targetName",
         GenerateKonaResourceTask::class.java,
@@ -60,6 +61,8 @@ private fun KotlinNativeTarget.updateBuild(extension: KonaResourceExtension) {
         task.outputDirectory.set(
             project.layout.buildDirectory.dir("generated/konaResource/${target.name}"),
         )
+        task.skipEmbed.set(skipEmbed)
+        task.onlyIf { !skipEmbed }
         task.compilerArgs.convention(emptyList())
         task.setFromExtension(extension)
         val runKonanCommand = runKonan(
@@ -71,6 +74,7 @@ private fun KotlinNativeTarget.updateBuild(extension: KonaResourceExtension) {
         task.compiler.set(runKonanCommand.first())
         task.compilerArgs.set(runKonanCommand.drop(1))
     }
+    if (skipEmbed) return
     target.binaries.all { binary ->
         val linkerOptions: Array<String> = extension.modules.map { module ->
             val safeName = module.first.replace(Regex("[^A-Za-z0-9_]"), "_")
@@ -91,6 +95,9 @@ abstract class GenerateKonaResourceTask @Inject constructor(
 
     @get:Input
     abstract val moduleNames: ListProperty<String>
+
+    @get:Input
+    abstract val skipEmbed: Property<Boolean>
 
     @get:Input
     abstract val lz4CompressionLevel: Property<Int>

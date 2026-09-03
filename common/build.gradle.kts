@@ -108,7 +108,7 @@ tasks.named<ProcessResources>("jvmProcessResources") {
         JniBuildTarget.MingwX64 to "windows-x86_64",
     ).forEach { (target, resourceDirectory) ->
         if (target in availableTargets) {
-            dependsOn(":commonJni:buildBlake3Jni${target.buildName.replaceFirstChar { it.uppercase() }}")
+            dependsOn(":commonJni:buildCommonJni${target.buildName.replaceFirstChar { it.uppercase() }}")
         } else {
             dependsOn(":commonJni:collectJniFromWorkflowResult")
         }
@@ -119,8 +119,8 @@ tasks.named<ProcessResources>("jvmProcessResources") {
 
     val macosTargets = listOf(JniBuildTarget.MacosArm64, JniBuildTarget.MacosX64)
     val macosLibrary = when {
-        macosTargets.all { it in availableTargets } -> {
-            dependsOn(":commonJni:buildBlake3JniMacosUniversal2")
+        macosTargets.any { it in availableTargets } -> {
+            dependsOn(":commonJni:buildCommonJniMacosUniversal2")
             rootProject.file("commonJni/build/native/macosUniversal2/libkona_common_jni.dylib")
         }
 
@@ -130,7 +130,7 @@ tasks.named<ProcessResources>("jvmProcessResources") {
                 dependsOn(":commonJni:collectJniFromWorkflowResult")
                 rootProject.file("commonJni/build/native/macosUniversal2/libkona_common_jni.dylib")
             } else {
-                dependsOn(":commonJni:buildBlake3Jni${hostMacosTarget.buildName.replaceFirstChar { it.uppercase() }}")
+                dependsOn(":commonJni:buildCommonJni${hostMacosTarget.buildName.replaceFirstChar { it.uppercase() }}")
                 rootProject.file(
                     "commonJni/build/native/${hostMacosTarget.buildName}/${hostMacosTarget.libraryName}",
                 )

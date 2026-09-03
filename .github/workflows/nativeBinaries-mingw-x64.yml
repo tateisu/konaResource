@@ -1,15 +1,14 @@
-name: common-jvm jar - Windows x64
+name: build matrix - Windows x64
 
 on:
   workflow_dispatch:
-  workflow_call:
 
 permissions:
   contents: read
 
 jobs:
   build:
-    uses: ./.github/workflows/common-jvm-jar.yml
+    uses: ./.github/workflows/nativeBinaries.yml
     with:
       host: MingwX64
       runner: windows-2025

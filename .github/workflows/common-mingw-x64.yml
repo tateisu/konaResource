@@ -1,4 +1,4 @@
-name: common-jvm jar - macOS x64
+name: common artifact - Windows x64
 
 on:
   workflow_dispatch:
@@ -11,5 +11,5 @@ jobs:
   build:
     uses: ./.github/workflows/common-jvm-jar.yml
     with:
-      host: MacosX64
-      runner: macos-15-intel
+      host: MingwX64
+      runner: windows-2025

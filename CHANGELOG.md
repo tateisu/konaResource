@@ -1,4 +1,9 @@
 ## works not tagged
+- macOS Universal2 JNI builds are now attempted whenever either macOS JNI target is available, so an unavailable architecture fails the Universal2 build instead of silently falling back to a single-architecture library.
+- `verifyCommonJni.pl` now verifies that the macOS JNI library contains both x86_64 and arm64 slices.
+- The `konaResource` plugin can skip resource embedding for selected Kotlin/Native targets with `skipEmbedIf`.
+- JVM file random-access subranges now share their underlying file handles and close them after the last range is released.
+- Native `common` publications now include target KLIBs and cinterop KLIBs for all configured Kotlin/Native targets.
 - Fixed macOS-hosted cross-compilation of the MinGW JNI library by selecting Kotlin/Native's bundled LLVM linker.
 - Fixed Windows-hosted cross-compilation of Linux JNI libraries and included the Linux x64 JNI library in Windows-built common JVM artifacts.
 - Migrated JNI and Kotlin/Native resource object compilation to the Kotlin/Native `run_konan` toolchain and removed the unsupported Windows ARM64 JNI target.

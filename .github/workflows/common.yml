@@ -1,4 +1,4 @@
-name: common-jvm jar - build per host
+name: common artifact - build per host
 
 on:
   workflow_call:
@@ -85,12 +85,29 @@ jobs:
             --directory /tmp/microsoft-jdk-macos-x64
           cp -R /tmp/microsoft-jdk-macos-x64/jdk-*/Contents/Home/include jdk/MacosX64/
 
-      - name: Build common-jvm jar
-        run: ./gradlew --no-daemon --max-workers=1 :common:jvmJar
+      - name: Build common artifact
+        run: ./gradlew --no-daemon --max-workers=1 :common:build
 
-      - name: Copy common.jar
+      - name: Publish common artifacts to local Maven repository
+        env:
+          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.GPG_KEY_01C52FD776E9651B84D63971A8E469517CB52830 }}
+          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.SIGNING_PASSWORD }}
+        run: ./gradlew --no-daemon --max-workers=1 :common:publishAllPublicationsToLocalMavenRepository
+
+      - name: Copy common.jar and native publications
         run: |
           mkdir -p workflowResult/${{ inputs.host }}
+          native_maven_dir="workflowResult/${{ inputs.host }}/maven/jp/juggler/konaResource"
+          mkdir -p "$native_maven_dir"
+          cp -R localMaven/jp/juggler/konaResource/common "$native_maven_dir/"
+          for module_dir in \
+            localMaven/jp/juggler/konaResource/common-linux* \
+            localMaven/jp/juggler/konaResource/common-macos* \
+            localMaven/jp/juggler/konaResource/common-mingw*; do
+            test -d "$module_dir" || continue
+            cp -R "$module_dir" "$native_maven_dir/"
+          done
+
           common_jar=""
           for candidate in common/build/libs/common-jvm-*.jar; do
             case "$candidate" in
@@ -103,9 +120,9 @@ jobs:
           test -n "$common_jar"
           cp "$common_jar" workflowResult/${{ inputs.host }}/common.jar
 
-      - name: Upload common.jar
+      - name: Upload common.jar and native publications
         uses: actions/upload-artifact@v4
         with:
-          name: common-jar-${{ inputs.host }}
-          path: workflowResult/${{ inputs.host }}/common.jar
+          name: common-artifact-${{ inputs.host }}
+          path: workflowResult/${{ inputs.host }}
           if-no-files-found: error

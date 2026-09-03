@@ -33,4 +33,21 @@ class OpenKonaArchiveJvmTest : FreeSpec({
             inputDirectory.toFile().deleteRecursively()
         }
     }
+
+    "keeps a sub range usable after its parent is closed" {
+        val archivePath = createTempFile("kona-reader-range", ".bin")
+        archivePath.writeBytes(byteArrayOf(0, 1, 2, 3, 4, 5))
+        val parent = FileRandomAccess(archivePath.toFile(), isReadOnly = true)
+        val range = parent.subRange(2, 5)
+        try {
+            parent.close()
+
+            val bytes = ByteArray(3)
+            range.readByteArray(bytes) shouldBe 3
+            bytes.toList() shouldBe listOf<Byte>(2, 3, 4)
+        } finally {
+            range.close()
+            archivePath.deleteIfExists()
+        }
+    }
 })

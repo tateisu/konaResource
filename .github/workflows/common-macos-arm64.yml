@@ -1,4 +1,4 @@
-name: common-jvm jar - Linux x64
+name: common artifact - macOS arm64
 
 on:
   workflow_dispatch:
@@ -11,5 +11,5 @@ jobs:
   build:
     uses: ./.github/workflows/common-jvm-jar.yml
     with:
-      host: LinuxX64
-      runner: ubuntu-24.04
+      host: MacosArm64
+      runner: macos-15

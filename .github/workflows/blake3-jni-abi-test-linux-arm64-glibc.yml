@@ -21,7 +21,7 @@ jobs:
       - name: BUILD commonJni
         env:
           SKIP_NATIVE_TARGETS: "true"
-        run: ./gradlew --no-daemon :commonJni:buildBlake3JniLinuxArm64
+        run: ./gradlew --no-daemon :commonJni:buildCommonJniLinuxArm64
       - name: common:jvmTest
         env:
           SKIP_NATIVE_TARGETS: "true"

@@ -8,25 +8,25 @@ permissions:
 
 jobs:
   linux-x64:
-    uses: ./.github/workflows/build-matrix-host.yml
+    uses: ./.github/workflows/nativeBinaries.yml
     with:
       host: LinuxX64
       runner: ubuntu-24.04
 
   macos-arm64:
-    uses: ./.github/workflows/build-matrix-host.yml
+    uses: ./.github/workflows/nativeBinaries.yml
     with:
       host: MacosArm64
       runner: macos-15
 
   macos-x64:
-    uses: ./.github/workflows/build-matrix-host.yml
+    uses: ./.github/workflows/nativeBinaries.yml
     with:
       host: MacosX64
       runner: macos-15-intel
 
   windows-x64:
-    uses: ./.github/workflows/build-matrix-host.yml
+    uses: ./.github/workflows/nativeBinaries.yml
     with:
-      host: WindowsX64
+      host: MingwX64
       runner: windows-2025

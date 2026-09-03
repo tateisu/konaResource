@@ -30,6 +30,14 @@ class KonaResourcePluginFunctionalTest : FreeSpec() {
     }
 
     init {
+        "skipEmbedIf receives the Kotlin/Native target name" {
+            val extension = KonaResourceExtension()
+            extension.skipEmbedIf { targetName -> targetName == "macosArm64" }
+
+            extension.shouldSkipEmbed("macosArm64") shouldBe true
+            extension.shouldSkipEmbed("macosX64") shouldBe false
+        }
+
         "does not register a target-less resource generation task" {
             val projectDir = Files.createTempDirectory("kona-resource-plugin-test")
             try {

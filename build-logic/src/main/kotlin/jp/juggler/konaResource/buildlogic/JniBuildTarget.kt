@@ -12,16 +12,28 @@ enum class JniBuildTarget(
     val libraryName: String,
     val jniPlatformInclude: String,
 ) {
-    LinuxX64("linux_x64", libraryName = "libkona_common_jni.so", jniPlatformInclude = "linux"),
-    LinuxArm64("linux_arm64", libraryName = "libkona_common_jni.so", jniPlatformInclude = "linux"),
-    MingwX64("mingw_x64", libraryName = "kona_common_jni.dll", jniPlatformInclude = "win32"),
-    MacosX64(
-        konanTargetName = "macos_x64",
-        libraryName = "libkona_common_jni.dylib",
-        jniPlatformInclude = "darwin",
+    LinuxX64(
+        konanTargetName = "linux_x64",
+        libraryName = "libkona_common_jni.so",
+        jniPlatformInclude = "linux",
+    ),
+    LinuxArm64(
+        konanTargetName = "linux_arm64",
+        libraryName = "libkona_common_jni.so",
+        jniPlatformInclude = "linux",
+    ),
+    MingwX64(
+        konanTargetName = "mingw_x64",
+        libraryName = "kona_common_jni.dll",
+        jniPlatformInclude = "win32",
     ),
     MacosArm64(
         konanTargetName = "macos_arm64",
+        libraryName = "libkona_common_jni.dylib",
+        jniPlatformInclude = "darwin",
+    ),
+    MacosX64(
+        konanTargetName = "macos_x64",
         libraryName = "libkona_common_jni.dylib",
         jniPlatformInclude = "darwin",
     ),
@@ -51,16 +63,13 @@ enum class JniBuildTarget(
     /**
      * enum要素が現在のホストと同一アーキなら真
      */
-    private fun isHostTarget(): Boolean {
-        val host = getKonaBuildHost()
-        return when (this) {
-            LinuxX64 -> host == KonaBuildHost.LinuxX64
-            LinuxArm64 -> false
-            MingwX64 -> host == KonaBuildHost.WindowsX64
-            MacosX64 -> host == KonaBuildHost.MacosX64
-            MacosArm64 -> host == KonaBuildHost.MacosArm64
+    private fun isHostTarget(): Boolean =
+        this == when (getKonaBuildHost()) {
+            KonaBuildHost.LinuxX64 -> LinuxX64
+            KonaBuildHost.MingwX64 -> MingwX64
+            KonaBuildHost.MacosArm64 -> MacosArm64
+            KonaBuildHost.MacosX64 -> MacosX64
         }
-    }
 }
 
 private var cacheAvailableList: List<JniBuildTarget>? = null

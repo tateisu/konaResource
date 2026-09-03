@@ -9,11 +9,12 @@ permissions:
   contents: read
 
 jobs:
-  build-common-jars:
-    uses: ./.github/workflows/common-jvm-jar-all.yml
+  build-common-artifacts:
+    uses: ./.github/workflows/common-all.yml
+    secrets: inherit
 
   publish:
-    needs: build-common-jars
+    needs: build-common-artifacts
     runs-on: ubuntu-latest
     environment: "maven central"
     env:
@@ -29,10 +30,10 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
-      - name: Download host common.jar files
+      - name: Download host common artifacts
         uses: actions/download-artifact@v4
         with:
-          name: common-jars
+          name: common-artifacts
           path: workflowResult
       - name: Verify collected JNI libraries
         run: perl verifyCommonJni.pl

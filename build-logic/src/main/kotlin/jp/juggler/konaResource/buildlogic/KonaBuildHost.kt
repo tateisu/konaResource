@@ -11,6 +11,16 @@ enum class KonaBuildHost(
     private val osNames: Set<String>,
     private val architectures: Set<String>,
 ) {
+    LinuxX64(
+        targetName = "LinuxX64",
+        osNames = setOf("linux"),
+        architectures = setOf("amd64", "x86_64", "x64"),
+    ),
+    MingwX64(
+        targetName = "MingwX64",
+        osNames = setOf("windows"),
+        architectures = setOf("amd64", "x86_64", "x64"),
+    ),
     MacosArm64(
         targetName = "MacosArm64",
         osNames = setOf("mac", "darwin"),
@@ -21,16 +31,6 @@ enum class KonaBuildHost(
         osNames = setOf("mac", "darwin"),
         architectures = setOf("amd64", "x86_64", "x64"),
     ),
-    LinuxX64(
-        targetName = "LinuxX64",
-        osNames = setOf("linux"),
-        architectures = setOf("amd64", "x86_64", "x64"),
-    ),
-    WindowsX64(
-        targetName = "WindowsX64",
-        osNames = setOf("windows"),
-        architectures = setOf("amd64", "x86_64", "x64"),
-    ),
 
     ;
 
@@ -38,7 +38,7 @@ enum class KonaBuildHost(
         get() = this == MacosArm64 || this == MacosX64
 
     val isWindows: Boolean
-        get() = this == WindowsX64
+        get() = this == MingwX64
 
     private fun matches(osName: String, architecture: String): Boolean =
         osNames.any(osName::contains) && architecture in architectures

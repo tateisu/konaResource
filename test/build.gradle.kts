@@ -26,7 +26,7 @@ val hostTargetName: String? = when (getKonaBuildHost()) {
     KonaBuildHost.LinuxX64 -> "linuxX64"
     KonaBuildHost.MacosArm64 -> "macosArm64"
     KonaBuildHost.MacosX64 -> null
-    KonaBuildHost.WindowsX64 -> "mingwX64"
+    KonaBuildHost.MingwX64 -> "mingwX64"
 }
 val hostTarget = availableKonaBuildTargets.firstOrNull { it.targetName == hostTargetName }
 

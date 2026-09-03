@@ -45,9 +45,9 @@ abstract class CollectJniFromWorkflowResultTask : DefaultTask() {
         val candidates = sourceJarSpecs.get().map { WorkflowResultJar(File(it.path), it.hostName) }
         collectionSpecs.get().forEach { spec ->
             val sortedCandidates = candidates.sortedWith(
-                compareBy<WorkflowResultJar> { levenshteinDistance(it.hostName, spec.targetName) }
-                    .thenBy { it.hostName }
-                    .thenBy { it.file.absolutePath },
+                compareBy<WorkflowResultJar> {
+                    levenshteinDistance(it.hostName, spec.targetName)
+                }.thenBy { it.hostName }.thenBy { it.file.absolutePath },
             )
             var collected = false
             for (candidate in sortedCandidates) {
@@ -64,6 +64,7 @@ abstract class CollectJniFromWorkflowResultTask : DefaultTask() {
                                 StandardCopyOption.REPLACE_EXISTING,
                             )
                         }
+                        logger.warn("${spec.targetName} read from $candidate")
                         collected = true
                     }
                 } catch (exception: IOException) {

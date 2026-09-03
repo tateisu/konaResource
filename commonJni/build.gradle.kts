@@ -42,12 +42,12 @@ fun JniBuildTarget.registerJniBuild(
     cflags: List<String>,
     linkFlags: List<String>,
 ): TaskProvider<*> {
-    val taskName = "buildBlake3Jni${buildName.replaceFirstChar { it.uppercase() }}"
+    val taskName = "buildCommonJni${buildName.replaceFirstChar { it.uppercase() }}"
     // run_konan clang does not apply Kotlin/Native's host-specific linker property.
     // Select the linker that the Kotlin/Native distribution provides for cross-links.
     val hostLinker = when {
         this in listOf(JniBuildTarget.LinuxX64, JniBuildTarget.LinuxArm64) &&
-            getKonaBuildHost() == KonaBuildHost.WindowsX64 -> "-fuse-ld=gold"
+            getKonaBuildHost() == KonaBuildHost.MingwX64 -> "-fuse-ld=gold"
         this in listOf(JniBuildTarget.LinuxX64, JniBuildTarget.LinuxArm64, JniBuildTarget.MingwX64) &&
             getKonaBuildHost() in listOf(KonaBuildHost.MacosX64, KonaBuildHost.MacosArm64) -> "-fuse-ld=lld"
         else -> null
@@ -137,15 +137,16 @@ tasks.register<ListAvailableJniBuildTargetsTask>("listAvailableJniBuildTargets")
     targetNames.set(availableJniBuildTargets.map { it.name })
 }
 
-val workflowResultJars = fileTree(rootProject.file("workflowResult")) {
+val workflowResultJars: List<Pair<File, String>> = fileTree(rootProject.file("workflowResult")) {
     include("**/common.jar")
-}.files
+}.files.filter {
     // workflowResult/common.jar is the local host build, not a host-specific result.
-    .filter { it.parentFile != rootProject.file("workflowResult") }
-    .map { it to it.parentFile.name }
+    it.parentFile != rootProject.file("workflowResult")
+}.map { it to it.parentFile.name }
     .sortedWith(compareBy({ it.second }, { it.first.absolutePath }))
 
 val jniCollectionSpecs = buildList {
+    // macos 以外を収集
     JniBuildTarget.entries
         .filter { it !in availableJniBuildTargets }
         .filter { it != JniBuildTarget.MacosX64 && it != JniBuildTarget.MacosArm64 }
@@ -192,14 +193,15 @@ tasks.assemble { dependsOn(collectJniFromWorkflowResult) }
 // このホストでビルド可能なアーキを全部ビルド
 availableJniBuildTargets.forEach{ it.registerJniBuild() }
 
-// MacosX64 と MacosArm64 をビルドできるなら Universal2 もビルド
-if (JniBuildTarget.MacosX64 in availableJniBuildTargets &&
+// MacosX64 または MacosArm64 をビルドできるなら Universal2 もビルドする。
+// Universal2 は両アーキテクチャを入力にするため、片方が使えなければ task が失敗する。
+if (JniBuildTarget.MacosX64 in availableJniBuildTargets ||
     JniBuildTarget.MacosArm64 in availableJniBuildTargets
 ) {
     // registerMacosUniversal2Build
     val macosUniversal = nativeBuildDirectory.map { it.dir("macosUniversal2").file("libkona_common_jni.dylib") }
     val macosJniIncludeDir = file(JniBuildTarget.MacosX64.javaHome(rootProject.projectDir)).resolve("include")
-    val registeredTask = tasks.register("buildBlake3JniMacosUniversal2", CommonJniBuildTask::class.java) {
+    val registeredTask = tasks.register("buildCommonJniMacosUniversal2", CommonJniBuildTask::class.java) {
         group = "build"
         description = "Builds the BLAKE3 JNI shared library for macOS universal2 (x86_64 + arm64)"
         linkFlags.set(project.jniBuildOptions(JniBuildTarget.MacosX64, "linkOpt", listOf("-shared")))

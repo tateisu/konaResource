@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   build:
-    uses: ./.github/workflows/build-matrix-host.yml
+    uses: ./.github/workflows/nativeBinaries.yml
     with:
       host: MacosArm64
       runner: macos-15

@@ -16,12 +16,12 @@
     - ダウンロードできたsample2のターゲットarchごとにセルを成功とみなす
 - 成功しなかったものはセルにマークダウン注釈参照を書き、注釈に失敗状況を説明する
 
-| Host\Target | LinuxX64             | LinuxArm64           | MingwX64             | MacosArm64       |
-|-------------|----------------------|----------------------|----------------------|------------------|
-| LinuxX64    | ✅                   | ✅                   | ✅                   | ❌[^macos-cross] |
-| MacosArm64  | ✅                   | ✅                   | ✅                   | ✅               |
-| MacosX64    | ✅                   | ✅                   | ✅                   | ✅               |
-| WindowsX64  | ❓                   | ❓                   | ❓                   | ❌[^macos-cross] |
+| Host\Target | LinuxX64 | LinuxArm64 | MingwX64 | MacosArm64       |
+|-------------|----------|------------|----------|------------------|
+| LinuxX64    | ✅       | ✅         | ✅       | ❌[^macos-cross] |
+| MacosArm64  | ✅       | ✅         | ✅       | ✅               |
+| MacosX64    | ✅       | ✅         | ✅       | ✅               |
+| MingwX64    | ❓       | ❓         | ❓       | ❌[^macos-cross] |
 
 [^macos-cross]: Kotlin/Native の公式サポートでは、Linux / WindowsホストからAppleターゲットの最終バイナリをビルドできない。
 非公式な`osxcross`環境で動く可能性はあるが、本プロジェクトでは未対応。
