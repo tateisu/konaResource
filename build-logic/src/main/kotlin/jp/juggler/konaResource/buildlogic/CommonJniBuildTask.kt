@@ -95,7 +95,7 @@ abstract class CommonJniBuildTask : DefaultTask() {
                     val linkerName = linkerFlag.substringAfter('=')
                     val resolvedLinker = resolveWindowsLinker(unit.compilerCommand, linkerName)
                     val effectiveLinkerFlag = resolvedLinker?.let {
-                        "-fuse-ld=\"${it.absolutePath}\""
+                        "-fuse-ld=\"${it.absolutePath.replace('\\', '/')}\""
                     } ?: linkerFlag
                     File(unitDirectory, "linker-options.rsp").apply {
                         writeText("$effectiveLinkerFlag${System.lineSeparator()}")
