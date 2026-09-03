@@ -66,9 +66,9 @@ abstract class CommonJniBuildTask : DefaultTask() {
             val unitDirectory = File(workDirectory, "unit$index").apply { mkdirs() }
             val objects = unit.sources.map { source ->
                 val objectFile = File(unitDirectory, "${source.name}.o")
-                // run_konan consumes bare -D options as its own arguments; pass defines through clang explicitly.
+                // run_konan.bat consumes bare -D options as Java arguments; use clang's long spelling.
                 val compilerFlags = unit.cflags.map { flag ->
-                    if (flag.startsWith("-D")) "-Xclang=$flag" else flag
+                    if (flag.startsWith("-D")) "--define-macro=${flag.removePrefix("-D")}" else flag
                 }
                 exec(
                     unit.compilerCommand,
