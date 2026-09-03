@@ -92,8 +92,13 @@ abstract class CommonJniBuildTask : DefaultTask() {
             val linkerResponseFile = linkFlags.get()
                 .firstOrNull { it.startsWith("-fuse-ld=") }
                 ?.let { linkerFlag ->
+                    val linkerName = linkerFlag.substringAfter('=')
+                    val resolvedLinker = resolveWindowsLinker(unit.compilerCommand, linkerName)
+                    val effectiveLinkerFlag = resolvedLinker?.let {
+                        "-fuse-ld=\"${it.absolutePath}\""
+                    } ?: linkerFlag
                     File(unitDirectory, "linker-options.rsp").apply {
-                        writeText("$linkerFlag${System.lineSeparator()}")
+                        writeText("$effectiveLinkerFlag${System.lineSeparator()}")
                     }
                 }
             val effectiveLinkFlags = buildList {
@@ -140,6 +145,17 @@ abstract class CommonJniBuildTask : DefaultTask() {
             }
         } catch (e: IOException) {
             throw GradleException("Compiler command '${command.joinToString(" ")}' could not be started.", e)
+        }
+    }
+
+    private fun resolveWindowsLinker(command: List<String>, linkerName: String): File? {
+        if (!System.getProperty("os.name").contains("windows", ignoreCase = true)) return null
+        val runKonan = command.firstOrNull {
+            it.endsWith("run_konan.bat", ignoreCase = true)
+        } ?: return null
+        val dependencies = File(runKonan).parentFile.parentFile.parentFile.resolve("dependencies")
+        return dependencies.walkTopDown().firstOrNull {
+            it.isFile && it.name.equals("ld.$linkerName.exe", ignoreCase = true)
         }
     }
 }
