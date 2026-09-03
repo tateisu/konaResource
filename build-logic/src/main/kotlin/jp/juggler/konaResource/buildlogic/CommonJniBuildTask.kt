@@ -103,8 +103,21 @@ abstract class CommonJniBuildTask : DefaultTask() {
     private fun exec(command: List<String>, args: List<String>) {
         try {
             val fullCommand = command + args
-            val exitCode = ProcessBuilder(fullCommand).inheritIO().start().waitFor()
-            check(exitCode == 0) { "Command failed: ${fullCommand.joinToString(" ")}" }
+            val process = ProcessBuilder(fullCommand)
+                .redirectErrorStream(true)
+                .start()
+            val output = process.inputStream.bufferedReader().use { it.readText() }
+            val exitCode = process.waitFor()
+            check(exitCode == 0) {
+                buildString {
+                    append("Command failed: ")
+                    append(fullCommand.joinToString(" "))
+                    if (output.isNotBlank()) {
+                        appendLine()
+                        append(output.trimEnd())
+                    }
+                }
+            }
         } catch (e: IOException) {
             throw GradleException("Compiler command '${command.joinToString(" ")}' could not be started.", e)
         }
