@@ -6,7 +6,7 @@
 | Host\Target | LinuxX64 | LinuxArm64 | MingwX64 | MacosX64 | MacosArm64 |
 |-------------|----------|------------|----------|----------|------------|
 | LinuxX64    | ✅       | ✅         | ✅       | ❌[A]    | ❌[A]      |
-| MacosArm64  | ❓       | ❓         | ❓       | ✅       | ✅         |
+| MacosArm64  | ✅       | ✅         | ✅       | ✅       | ✅         |
 | MacosX64    | ❓       | ❓         | ❓       | ✅       | ✅         |
 | WindowsX64  | ✅       | ✅         | ✅       | ❌[A]    | ❌[A]      |
 
