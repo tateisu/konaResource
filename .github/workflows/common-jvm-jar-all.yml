@@ -18,7 +18,7 @@ jobs:
     uses: ./.github/workflows/common-jvm-jar-macos-arm64.yml
 
   windows-x64:
-    uses: ./.github/workflows/common-jvm-jar-windows-x64.yml
+    uses: ./.github/workflows/common-jvm-jar-mingw-x64.yml
 
   collect:
     name: Collect common.jar files
@@ -43,11 +43,11 @@ jobs:
           name: common-jar-MacosArm64
           path: workflowResult/MacosArm64
 
-      - name: Download Windows x64 common.jar
+      - name: Download Mingw X64 common.jar
         uses: actions/download-artifact@v4
         with:
-          name: common-jar-WindowsX64
-          path: workflowResult/WindowsX64
+          name: common-jar-MingwX64
+          path: workflowResult/MingwX64
 
       - name: Upload collected common.jar files
         uses: actions/upload-artifact@v4

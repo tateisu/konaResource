@@ -49,6 +49,8 @@
 
 ## 細かい修正
 - build-logic/src/main/kotlin/jp/juggler/konaResource/buildlogic/KotlinNativeToolchain.kt のいくつかの例外的な状態は例外を投げるべき
+- commonJni 中でビルドタスク名に Blake3Jni を使う箇所が残っている
+- verifyCommonJni.pl は macos の universal dll がX64とARM64の両方に対応しているか検証していない
 
 ## testの改善
 - testで日本語ファイル名/ディレクトリ名も確認したい。

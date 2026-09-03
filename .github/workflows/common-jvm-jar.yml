@@ -32,17 +32,6 @@ jobs:
       - name: Download Kotlin/Native distribution and dependencies
         run: ./gradlew --no-daemon --max-workers=1 :common:downloadKotlinNativeDistribution -PbootstrapKotlinNative
 
-      - name: Download Linux arm64 JDK headers
-        run: |
-          mkdir -p jdk/LinuxArm64
-          mkdir -p /tmp/microsoft-jdk-linux-aarch64
-          curl --fail --location --silent --show-error \
-            https://aka.ms/download-jdk/microsoft-jdk-21.0.12.1-linux-aarch64.tar.gz \
-            --output /tmp/microsoft-jdk-linux-aarch64.tar.gz
-          tar --extract --gzip --file /tmp/microsoft-jdk-linux-aarch64.tar.gz \
-            --directory /tmp/microsoft-jdk-linux-aarch64
-          cp -R /tmp/microsoft-jdk-linux-aarch64/jdk-*/include jdk/LinuxArm64/
-
       - name: Download Linux x64 JDK headers
         run: |
           mkdir -p jdk/LinuxX64
@@ -53,6 +42,17 @@ jobs:
           tar --extract --gzip --file /tmp/microsoft-jdk-linux-x64.tar.gz \
             --directory /tmp/microsoft-jdk-linux-x64
           cp -R /tmp/microsoft-jdk-linux-x64/jdk-*/include jdk/LinuxX64/
+
+      - name: Download Linux arm64 JDK headers
+        run: |
+          mkdir -p jdk/LinuxArm64
+          mkdir -p /tmp/microsoft-jdk-linux-aarch64
+          curl --fail --location --silent --show-error \
+            https://aka.ms/download-jdk/microsoft-jdk-21.0.12.1-linux-aarch64.tar.gz \
+            --output /tmp/microsoft-jdk-linux-aarch64.tar.gz
+          tar --extract --gzip --file /tmp/microsoft-jdk-linux-aarch64.tar.gz \
+            --directory /tmp/microsoft-jdk-linux-aarch64
+          cp -R /tmp/microsoft-jdk-linux-aarch64/jdk-*/include jdk/LinuxArm64/
 
       - name: Download Windows x64 JDK headers
         run: |
