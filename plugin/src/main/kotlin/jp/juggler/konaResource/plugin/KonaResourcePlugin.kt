@@ -1,8 +1,8 @@
 package jp.juggler.konaResource.plugin
 
-import jp.juggler.konaResource.buildlogic.runKonan
 import jp.juggler.konaArchive.konaArchivePack
 import jp.juggler.konaArchive.util.Lz4Options
+import jp.juggler.konaResource.buildlogic.runKonan
 import org.gradle.api.Action
 import org.gradle.api.DefaultTask
 import org.gradle.api.Plugin

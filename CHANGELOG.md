@@ -1,4 +1,5 @@
 ## works not tagged
+- Fixed Windows-hosted cross-compilation of Linux JNI libraries and included the Linux x64 JNI library in Windows-built common JVM artifacts.
 - Migrated JNI and Kotlin/Native resource object compilation to the Kotlin/Native `run_konan` toolchain and removed the unsupported Windows ARM64 JNI target.
 - Removed target-less host resource object generation; resource objects are now generated only for Kotlin/Native targets.
 - Updated GitHub Actions to the latest major versions: `actions/checkout@v7`, `actions/setup-java@v6`, `actions/cache@v6`, and `gradle/actions/setup-gradle@v6`.
