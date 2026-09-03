@@ -29,47 +29,8 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - name: Download Kotlin/Native distribution
-        run: |
-          version=2.4.10
-          case "${{ inputs.host }}" in
-            LinuxX64)
-              distribution=kotlin-native-prebuilt-linux-x86_64
-              platform=linux-x86_64
-              archive=tar.gz
-              ;;
-            MacosX64)
-              distribution=kotlin-native-prebuilt-macos-x86_64
-              platform=macos-x86_64
-              archive=tar.gz
-              ;;
-            MacosArm64)
-              distribution=kotlin-native-prebuilt-macos-aarch64
-              platform=macos-aarch64
-              archive=tar.gz
-              ;;
-            WindowsX64)
-              distribution=kotlin-native-prebuilt-windows-x86_64
-              platform=windows-x86_64
-              archive=zip
-              ;;
-            *)
-              echo "unsupported host: ${{ inputs.host }}" >&2
-              exit 1
-              ;;
-          esac
-          mkdir -p "$HOME/.konan"
-          archive_file="/tmp/$distribution-$version.$archive"
-          curl --fail --location --silent --show-error \
-            "https://repo1.maven.org/maven2/org/jetbrains/kotlin/kotlin-native-prebuilt/$version/kotlin-native-prebuilt-$version-$platform.$archive" \
-            --output "$archive_file"
-          if [[ "$archive" == zip ]]; then
-            unzip -q "$archive_file" -d "$HOME/.konan"
-          else
-            tar --extract --gzip --file "$archive_file" --directory "$HOME/.konan"
-          fi
-          test -f "$HOME/.konan/$distribution-$version/bin/run_konan" || \
-            test -f "$HOME/.konan/$distribution-$version/bin/run_konan.bat"
+      - name: Download Kotlin/Native distribution and dependencies
+        run: ./gradlew --no-daemon --max-workers=1 :common:downloadKotlinNativeDistribution -PbootstrapKotlinNative
 
       - name: Download Linux arm64 JDK headers
         run: |

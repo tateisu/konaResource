@@ -10,16 +10,15 @@ private val nativeToolchains by lazy {
             ?: File(System.getProperty("user.home"), ".konan").absolutePath,
     )
     if (!dataDirectory.isDirectory) {
-        error("nativeToolchains is not directory. $dataDirectory")
+        emptyList()
+    } else {
+        dataDirectory.walkTopDown()
+            .filter { it.isFile && it.name in setOf("run_konan", "run_konan.bat") }
+            .map { it.parentFile.parentFile }
+            .filter { it.isDirectory }
+            .distinct()
+            .toList()
     }
-    dataDirectory.walkTopDown()
-        .filter { it.isFile && it.name in setOf("run_konan", "run_konan.bat") }
-        .map { it.parentFile.parentFile }
-        .filter { it.isDirectory }
-        .distinct()
-        .toList()
-        .takeIf { it.isNotEmpty() }
-        ?: error("can't find 'run_konan' in $dataDirectory")
 }
 
 private class NativeToolchain(private val home: File) {

@@ -49,8 +49,9 @@ val localMavenAvailable = file("$rootDir/localMaven").isDirectory
 val isLocalPublishing = gradle.startParameter.taskNames.any {
     it.substringAfterLast(':') in setOf("publishPluginLocal", "publishLocalMaven")
 }
+val isKotlinNativeBootstrap = gradle.startParameter.projectProperties.containsKey("bootstrapKotlinNative")
 when {
-    !localMavenAvailable -> println("[konaResource] Skipping :sample2 because localMaven/ was not found.")
+    !localMavenAvailable || isKotlinNativeBootstrap -> println("[konaResource] Skipping :sample2 during Kotlin/Native bootstrap.")
     isLocalPublishing -> println("[konaResource] Skipping :sample2 while publishing the local plugin.")
     else -> {
         include(":sample2")

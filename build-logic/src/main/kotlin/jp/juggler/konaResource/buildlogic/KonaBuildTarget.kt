@@ -39,7 +39,14 @@ fun Project.availableKonaBuildTarget(): List<KonaBuildTarget> =
  * 利用可能なKotlin/NativeターゲットをKotlin Multiplatformへ登録する。
  */
 fun KotlinMultiplatformExtension.konaTargets() {
-    project.availableKonaBuildTarget().forEach { target ->
+    val targets = project.availableKonaBuildTarget().ifEmpty {
+        if (project.providers.gradleProperty("bootstrapKotlinNative").isPresent) {
+            KonaBuildTarget.entries
+        } else {
+            emptyList()
+        }
+    }
+    targets.forEach { target ->
         when (target) {
             KonaBuildTarget.LinuxX64 -> linuxX64()
             KonaBuildTarget.LinuxArm64 -> linuxArm64()
