@@ -3,9 +3,11 @@ import jp.juggler.konaResource.buildlogic.CommonJniBuildTask
 import jp.juggler.konaResource.buildlogic.CommonJniBuildUnit
 import jp.juggler.konaResource.buildlogic.JniCollectionSpec
 import jp.juggler.konaResource.buildlogic.JniBuildTarget
+import jp.juggler.konaResource.buildlogic.KonaBuildHost
 import jp.juggler.konaResource.buildlogic.ListAvailableJniBuildTargetsTask
 import jp.juggler.konaResource.buildlogic.WorkflowResultJarSpec
 import jp.juggler.konaResource.buildlogic.availableJniBuildTargets
+import jp.juggler.konaResource.buildlogic.getKonaBuildHost
 import jp.juggler.konaResource.buildlogic.jniBuildOptions
 import jp.juggler.konaResource.buildlogic.runKonan
 
@@ -41,13 +43,28 @@ fun JniBuildTarget.registerJniBuild(
     linkFlags: List<String>,
 ): TaskProvider<*> {
     val taskName = "buildBlake3Jni${buildName.replaceFirstChar { it.uppercase() }}"
+    // run_konan clang does not apply Kotlin/Native's host-specific linker property.
+    // Select the linker that the Kotlin/Native distribution provides for Linux cross-links.
+    val hostLinker = when {
+        this in listOf(JniBuildTarget.LinuxX64, JniBuildTarget.LinuxArm64) &&
+            getKonaBuildHost() == KonaBuildHost.WindowsX64 -> "-fuse-ld=gold"
+        this in listOf(JniBuildTarget.LinuxX64, JniBuildTarget.LinuxArm64) &&
+            getKonaBuildHost() in listOf(KonaBuildHost.MacosX64, KonaBuildHost.MacosArm64) -> "-fuse-ld=lld"
+        else -> null
+    }
     // ターゲットごとのサブディレクトリに出力して、DLL名の衝突(linux x64/arm64 の .so 等)を避ける。
     val library = nativeBuildDirectory.map { it.dir(buildName).file(libraryName) }
     val jniIncludeDir = file(javaHome(rootProject.projectDir)).resolve("include")
     return tasks.register(taskName, CommonJniBuildTask::class.java) {
         group = "build"
-        description = "Builds the BLAKE3 JNI shared library for $buildName"
-        this.linkFlags.set(project.jniBuildOptions(this@registerJniBuild, "linkOpt", linkFlags))
+        description = "Builds the kona_common_jni shared library for $buildName"
+        this.linkFlags.set(
+            project.jniBuildOptions(
+                this@registerJniBuild,
+                "linkOpt",
+                listOfNotNull(hostLinker) + linkFlags,
+            ),
+        )
         buildUnits.set(
             listOf(
                 CommonJniBuildUnit(
