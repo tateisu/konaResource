@@ -82,7 +82,7 @@ for (entry in root.pathToDir(path)!!) {
 The `konaResource` plugin embeds each configured resource directory into every
 Kotlin/Native executable that belongs to the target project:
 
-1. `generateKonaResource` packs the directory into a KonaArchive `.bin` file.
+1. Each target-specific `generateKonaResource<Target>` task packs the directory into a KonaArchive `.bin` file.
 2. It generates an assembly source using `.incbin`, with exported start and end symbols.
 3. The assembly source is compiled into an object file and passed to the Native linker.
 4. `embedKonaArchive(name)` converts the name to the same safe symbol name and resolves
@@ -160,45 +160,28 @@ this project uses 2 kind of Native code.
 - Java JNI : used in `plugin` module, that need to build embed resource.
 - Kotlin/Native : used in `common` module and embed to user application.
 
-#### cross-compiler
-On a Linux host, install the cross-compilers with apt before building the cross-platform JNI.
+#### Kotlin/Native compiler
+JNI and resource object builds use the Kotlin/Native compiler distribution's `run_konan` wrapper.
+The build script automatically detects which targets are available from `kotlinc-native -list-targets`.
 
 ```shell
-# (Ubuntu)
-
-# (Optional) Ubuntu's ARM64 cross compiler conflicts with `gcc-multilib`. 
-# If `gcc-aarch64-linux-gnu` reports an unmet dependency and `gcc-multilib`
-# or `g++-multilib` is installed, remove the multilib meta packages first.
-sudo apt remove gcc-multilib g++-multilib
-
-# Linux ARM64: provides aarch64-linux-gnu-gcc
-sudo apt install gcc-aarch64-linux-gnu
-
-# Windows x64: provides x86_64-w64-mingw32-gcc
-sudo apt install gcc-mingw-w64-x86-64
+./gradlew :commonJni:listAvailableJniBuildTargets
 ```
 
-- The build script automatically detects which JNI targets are available on the current host.
-- **Windows ARM64** (`aarch64-w64-mingw32-gcc`) is not available as an official Ubuntu package.
-- macOS targets require an Apple SDK and an appropriate cross-compilation environment such as osxcross.
-
-#### JNI build property overrides
-The default JNI compiler and options can be overridden for one host/target pair with Gradle properties.
+#### JNI build option overrides
+The default JNI compiler options can be overridden for one host/target pair with Gradle properties.
 The host and target names are the enum names in `KonaBuildHost` and `JniBuildTarget`.
 
 ```shell
 ./gradlew \
-  -PLinuxX64_WindowsArm64_compiler=aarch64-w64-mingw32-clang \
-  -PLinuxX64_WindowsArm64_compileOpt=-Wall,-Wextra,-O3,-D_JNI_IMPLEMENTATION_ \
-  -PLinuxX64_WindowsArm64_linkOpt=-shared \
+  -PLinuxX64_MingwX64_compileOpt=-Wall,-Wextra,-O3,-D_JNI_IMPLEMENTATION_ \
+  -PLinuxX64_MingwX64_linkOpt=-shared \
   :common:jvmJar
 ```
 
-- `{host}_{target}_compiler` replaces the compiler executable name.
 - `{host}_{target}_compileOpt` replaces the default C compiler options. Options are comma-separated.
 - `{host}_{target}_linkOpt` replaces the default linker options. Options are comma-separated.
 - If a property is not specified, the built-in default is used.
-- The compiler must be available on `PATH` (or be an executable path). The properties configure Gradle only; they do not install a compiler or provide a target JDK.
 
 #### JNI header and dll
 - go https://learn.microsoft.com/ja-jp/java/openjdk/download#openjdk-21
@@ -206,11 +189,11 @@ The host and target names are the enum names in `KonaBuildHost` and `JniBuildTar
 - put JDK content into `${project}/jdk/${ArchName}/` .
 - build script search  `${project}/jdk/${ArchName}/include/jni.h`.
 - if not found, your host jdk Gradle runs on is used for same arch.  
-- build script enable JNI build target if jni.h found and compilers found.
+- build script enables a JNI build target if its Kotlin/Native target and `jni.h` are available.
 
 #### Kotlin/Native
 - The `common` module's native targets (linuxX64 / linuxArm64 / mingwX64) are cross-compiled
-  by Kotlin/Native itself, so they do not require these external compilers.
+  by Kotlin/Native itself.
 - but **Alpine Linux (musl)** have issue for build/run. see [KT-38891](https://youtrack.jetbrains.com/issue/KT-38891).
 
 ## Using the CLI

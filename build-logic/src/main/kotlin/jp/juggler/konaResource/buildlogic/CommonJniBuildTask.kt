@@ -29,15 +29,12 @@ import java.nio.file.StandardCopyOption
  * config cache 対応のため、スクリプト定義クラスやクロージャは捕捉しない。
  */
 data class CommonJniBuildUnit(
-    val arch: String,
+    val compilerCommand: List<String>,
     val sources: List<File>,
     val cflags: List<String>,
 ) : java.io.Serializable
 
 abstract class CommonJniBuildTask : DefaultTask() {
-    @get:Input
-    abstract val compiler: Property<String>
-
     @get:Input
     abstract val linkFlags: ListProperty<String>
 
@@ -57,7 +54,6 @@ abstract class CommonJniBuildTask : DefaultTask() {
 
     @TaskAction
     fun build() {
-        val compilerName = compiler.get()
         val units = buildUnits.get()
         val output = outputLibrary.get().asFile
         output.parentFile.mkdirs()
@@ -68,12 +64,11 @@ abstract class CommonJniBuildTask : DefaultTask() {
         val includeArgs = includeDirs.files.map { "-I${it.absolutePath}" }.toList()
         val intermediateLibraries = units.mapIndexed { index, unit ->
             val unitDirectory = File(workDirectory, "unit$index").apply { mkdirs() }
-            val archArgs = if (unit.arch.isEmpty()) emptyList() else listOf("-arch", unit.arch)
             val objects = unit.sources.map { source ->
                 val objectFile = File(unitDirectory, "${source.name}.o")
                 exec(
-                    compilerName,
-                    archArgs + unit.cflags +
+                    unit.compilerCommand,
+                    unit.cflags +
                         listOf("-c", source.absolutePath) +
                         includeArgs +
                         listOf("-o", objectFile.absolutePath),
@@ -82,8 +77,8 @@ abstract class CommonJniBuildTask : DefaultTask() {
             }
             val intermediateLibrary = File(unitDirectory, "lib.dylib")
             exec(
-                compilerName,
-                archArgs + linkFlags.get() +
+                unit.compilerCommand,
+                linkFlags.get() +
                     listOf("-o", intermediateLibrary.absolutePath) +
                     objects.map { it.absolutePath },
             )
@@ -93,7 +88,7 @@ abstract class CommonJniBuildTask : DefaultTask() {
             intermediateLibraries[0].copyTo(output, overwrite = true)
         } else {
             exec(
-                "lipo",
+                listOf("lipo"),
                 listOf("-create") +
                     intermediateLibraries.map { it.absolutePath } +
                     listOf("-output", output.absolutePath),
@@ -101,12 +96,13 @@ abstract class CommonJniBuildTask : DefaultTask() {
         }
     }
 
-    private fun exec(program: String, args: List<String>) {
+    private fun exec(command: List<String>, args: List<String>) {
         try {
-            val exitCode = ProcessBuilder(listOf(program) + args).inheritIO().start().waitFor()
-            check(exitCode == 0) { "Command failed: ${(listOf(program) + args).joinToString(" ")}" }
+            val fullCommand = command + args
+            val exitCode = ProcessBuilder(fullCommand).inheritIO().start().waitFor()
+            check(exitCode == 0) { "Command failed: ${fullCommand.joinToString(" ")}" }
         } catch (e: IOException) {
-            throw GradleException("C compiler '$program' not found on PATH.", e)
+            throw GradleException("Compiler command '${command.joinToString(" ")}' could not be started.", e)
         }
     }
 }

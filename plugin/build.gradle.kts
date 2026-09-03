@@ -5,6 +5,14 @@ plugins {
     `maven-publish`
 }
 
+kotlin {
+    sourceSets {
+        named("main") {
+            kotlin.srcDir(rootProject.file("build-logic/src/shared/kotlin"))
+        }
+    }
+}
+
 group = "jp.juggler.konaResource"
 version = rootProject.version
 

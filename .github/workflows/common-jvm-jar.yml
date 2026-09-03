@@ -1,0 +1,97 @@
+name: common-jvm jar - build per host
+
+on:
+  workflow_call:
+    inputs:
+      host:
+        required: true
+        type: string
+      runner:
+        required: true
+        type: string
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ inputs.host }}
+    runs-on: ${{ inputs.runner }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Set up Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Download Linux arm64 JDK headers
+        run: |
+          mkdir -p jdk/LinuxArm64
+          mkdir -p /tmp/microsoft-jdk-linux-aarch64
+          curl --fail --location --silent --show-error \
+            https://aka.ms/download-jdk/microsoft-jdk-21.0.12.1-linux-aarch64.tar.gz \
+            --output /tmp/microsoft-jdk-linux-aarch64.tar.gz
+          tar --extract --gzip --file /tmp/microsoft-jdk-linux-aarch64.tar.gz \
+            --directory /tmp/microsoft-jdk-linux-aarch64
+          cp -R /tmp/microsoft-jdk-linux-aarch64/jdk-*/include jdk/LinuxArm64/
+
+      - name: Download Windows x64 JDK headers
+        run: |
+          mkdir -p jdk/MingwX64
+          curl --fail --location --silent --show-error \
+            https://aka.ms/download-jdk/microsoft-jdk-21.0.12.1-windows-x64.zip \
+            --output /tmp/microsoft-jdk-windows-x64.zip
+          unzip -q /tmp/microsoft-jdk-windows-x64.zip -d /tmp/microsoft-jdk-windows-x64
+          cp -R /tmp/microsoft-jdk-windows-x64/*/include jdk/MingwX64/
+
+      - name: Download macOS arm64 JDK headers
+        run: |
+          mkdir -p jdk/MacosArm64
+          mkdir -p /tmp/microsoft-jdk-macos-aarch64
+          curl --fail --location --silent --show-error \
+            https://aka.ms/download-jdk/microsoft-jdk-21.0.12.1-macos-aarch64.tar.gz \
+            --output /tmp/microsoft-jdk-macos-aarch64.tar.gz
+          tar --extract --gzip --file /tmp/microsoft-jdk-macos-aarch64.tar.gz \
+            --directory /tmp/microsoft-jdk-macos-aarch64
+          cp -R /tmp/microsoft-jdk-macos-aarch64/jdk-*/Contents/Home/include jdk/MacosArm64/
+
+      - name: Download macOS x64 JDK headers
+        run: |
+          mkdir -p jdk/MacosX64
+          mkdir -p /tmp/microsoft-jdk-macos-x64
+          curl --fail --location --silent --show-error \
+            https://aka.ms/download-jdk/microsoft-jdk-21.0.12.1-macos-x64.tar.gz \
+            --output /tmp/microsoft-jdk-macos-x64.tar.gz
+          tar --extract --gzip --file /tmp/microsoft-jdk-macos-x64.tar.gz \
+            --directory /tmp/microsoft-jdk-macos-x64
+          cp -R /tmp/microsoft-jdk-macos-x64/jdk-*/Contents/Home/include jdk/MacosX64/
+
+      - name: Build common-jvm jar
+        run: ./gradlew --no-daemon --max-workers=1 :common:jvmJar
+
+      - name: Copy common.jar
+        run: |
+          mkdir -p workflowResult/${{ inputs.host }}
+          common_jar=""
+          for candidate in common/build/libs/common-jvm-*.jar; do
+            case "$candidate" in
+              *-sources.jar|*-javadoc.jar) continue ;;
+            esac
+            if [[ -z "$common_jar" || "$candidate" -nt "$common_jar" ]]; then
+              common_jar="$candidate"
+            fi
+          done
+          test -n "$common_jar"
+          cp "$common_jar" workflowResult/${{ inputs.host }}/common.jar
+
+      - name: Upload common.jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: common-jar-${{ inputs.host }}
+          path: workflowResult/${{ inputs.host }}/common.jar
+          if-no-files-found: error

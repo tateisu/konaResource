@@ -1,5 +1,6 @@
 package jp.juggler.konaResource.plugin
 
+import jp.juggler.konaResource.buildlogic.runKonan
 import jp.juggler.konaArchive.konaArchivePack
 import jp.juggler.konaArchive.util.Lz4Options
 import org.gradle.api.Action
@@ -19,38 +20,30 @@ import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
+import org.jetbrains.kotlin.gradle.plugin.getKotlinPluginVersion
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
-import java.util.*
 import javax.inject.Inject
 
 @Suppress("unused")
 class KonaResourcePlugin : Plugin<Project> {
     override fun apply(project: Project) {
         val extension = project.extensions.create("konaResource", KonaResourceExtension::class.java)
-        val generate = project.tasks.register("generateKonaResource", GenerateKonaResourceTask::class.java)
-        generate.configure { task ->
-            task.outputDirectory.set(project.layout.buildDirectory.dir("generated/konaResource"))
-            task.compiler.convention("cc")
-            task.compilerArgs.convention(emptyList())
-        }
-        project.afterEvaluate {
-            generate.configure { task ->
-                task.setFromExtension(extension)
-            }
-        }
-        project.tasks.register("konaResourceObjects").configure { task ->
-            task.dependsOn(generate)
-            task.doLast {
-                task.logger.lifecycle(
-                    "Kona Resource objects are in ${generate.get().outputDirectory.get().asFile}",
-                )
-            }
-        }
         project.pluginManager.withPlugin("org.jetbrains.kotlin.multiplatform") {
             project.afterEvaluate {
                 val kotlin = project.extensions.getByType(KotlinMultiplatformExtension::class.java)
                 kotlin.targets.withType(KotlinNativeTarget::class.java)
                     .configureEach { target -> target.updateBuild(extension) }
+                project.tasks.register("konaResourceObjects", DefaultTask::class.java) { aggregate ->
+                    aggregate.dependsOn(project.tasks.withType(GenerateKonaResourceTask::class.java))
+                    aggregate.doLast {
+                        project.tasks.withType(GenerateKonaResourceTask::class.java).forEach { task ->
+                            aggregate.logger.lifecycle(
+                                "Kona Resource objects for ${task.name} are in " +
+                                    task.outputDirectory.get().asFile,
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -58,7 +51,6 @@ class KonaResourcePlugin : Plugin<Project> {
 
 private fun KotlinNativeTarget.updateBuild(extension: KonaResourceExtension) {
     val target = this
-    val hostOsLower = System.getProperty("os.name").lowercase(Locale.ROOT)
     val targetName = target.name.replaceFirstChar { it.uppercase() }
     val targetGenerate = project.tasks.register(
         "generateKonaResource$targetName",
@@ -70,22 +62,14 @@ private fun KotlinNativeTarget.updateBuild(extension: KonaResourceExtension) {
         )
         task.compilerArgs.convention(emptyList())
         task.setFromExtension(extension)
-        task.compiler.set(compilerForTarget(target.name))
-        when {
-            target.name.equals("linuxX64", ignoreCase = true) &&
-                (hostOsLower.contains("mac") || hostOsLower.contains("windows")) -> {
-                task.compilerArgs.set(listOf("--target=x86_64-linux-gnu"))
-            }
-
-            target.name.equals("linuxArm64", ignoreCase = true) -> {
-                task.compilerArgs.set(listOf("--target=aarch64-linux-gnu"))
-            }
-
-            target.name.equals("mingwX64", ignoreCase = true) &&
-                hostOsLower.contains("mac") -> {
-                task.compilerArgs.set(listOf("--target=x86_64-w64-windows-gnu"))
-            }
-        }
+        val runKonanCommand = runKonan(
+            kotlinVersion = project.getKotlinPluginVersion(),
+            mode = "clang",
+            tool = "clang",
+            target = target.konanTarget.name,
+        )
+        task.compiler.set(runKonanCommand.first())
+        task.compilerArgs.set(runKonanCommand.drop(1))
     }
     target.binaries.all { binary ->
         val linkerOptions: Array<String> = extension.modules.map { module ->
@@ -94,26 +78,6 @@ private fun KotlinNativeTarget.updateBuild(extension: KonaResourceExtension) {
         }.toTypedArray()
         binary.linkerOpts(*linkerOptions)
         binary.linkTaskProvider.configure { it.dependsOn(targetGenerate) }
-    }
-}
-
-private fun compilerForTarget(targetName: String): String {
-    val hostOsLower = System.getProperty("os.name").lowercase(Locale.ROOT)
-    return when (targetName.lowercase(Locale.ROOT)) {
-        "linuxx64" -> when {
-            hostOsLower.contains("mac") || hostOsLower.contains("windows") -> "clang"
-            else -> "cc"
-        }
-
-        "linuxarm64" -> "clang"
-
-        "mingwx64" -> when {
-            hostOsLower.contains("windows") -> "cc"
-            hostOsLower.contains("mac") -> "clang"
-            else -> "x86_64-w64-mingw32-gcc"
-        }
-
-        else -> "cc"
     }
 }
 

@@ -3,10 +3,11 @@ import jp.juggler.konaResource.buildlogic.CommonJniBuildTask
 import jp.juggler.konaResource.buildlogic.CommonJniBuildUnit
 import jp.juggler.konaResource.buildlogic.JniCollectionSpec
 import jp.juggler.konaResource.buildlogic.JniBuildTarget
+import jp.juggler.konaResource.buildlogic.ListAvailableJniBuildTargetsTask
 import jp.juggler.konaResource.buildlogic.WorkflowResultJarSpec
 import jp.juggler.konaResource.buildlogic.availableJniBuildTargets
-import jp.juggler.konaResource.buildlogic.jniBuildProperty
 import jp.juggler.konaResource.buildlogic.jniBuildOptions
+import jp.juggler.konaResource.buildlogic.runKonan
 
 plugins {
     base
@@ -46,12 +47,16 @@ fun JniBuildTarget.registerJniBuild(
     return tasks.register(taskName, CommonJniBuildTask::class.java) {
         group = "build"
         description = "Builds the BLAKE3 JNI shared library for $buildName"
-        this.compiler.set(this@registerJniBuild.compilerForHost(project))
         this.linkFlags.set(project.jniBuildOptions(this@registerJniBuild, "linkOpt", linkFlags))
         buildUnits.set(
             listOf(
                 CommonJniBuildUnit(
-                    arch = arch,
+                    compilerCommand = runKonan(
+                        kotlinVersion = libs.versions.kotlin.get(),
+                        mode = "clang",
+                        tool = "clang",
+                        target = this@registerJniBuild.konanTargetName,
+                    ),
                     sources = sources,
                     cflags = project.jniBuildOptions(this@registerJniBuild, "compileOpt", cflags),
                 ),
@@ -83,21 +88,13 @@ fun JniBuildTarget.registerJniBuild() {
         )
 
         // Windows は x86-64 用の .S アセンブリを用意していないため portable 実装にする。
-        JniBuildTarget.WindowsX64 -> registerJniBuild(
+        JniBuildTarget.MingwX64 -> registerJniBuild(
             sources = commonSources,
             cflags = listOf(
                 "-Wall", "-Wextra", "-O3", "-D_JNI_IMPLEMENTATION_",
                 "-DBLAKE3_NO_AVX512", "-DBLAKE3_NO_AVX2", "-DBLAKE3_NO_SSE41", "-DBLAKE3_NO_SSE2",
             ),
-            linkFlags = listOf("-shared", "-static-libgcc"),
-        )
-
-        JniBuildTarget.WindowsArm64 -> registerJniBuild(
-            sources = commonSources,
-            cflags = listOf(
-                "-Wall", "-Wextra", "-O3", "-D_JNI_IMPLEMENTATION_", "-DBLAKE3_USE_NEON=0",
-            ),
-            linkFlags = listOf("-shared", "-static-libgcc"),
+            linkFlags = listOf("-shared"),
         )
 
         JniBuildTarget.MacosX64 -> registerJniBuild(
@@ -115,7 +112,13 @@ fun JniBuildTarget.registerJniBuild() {
     tasks.assemble { dependsOn(registeredTask) }
 }
 
-val availableJniBuildTargets = project.availableJniBuildTargets()
+val availableJniBuildTargets = project.availableJniBuildTargets(libs.versions.kotlin.get())
+
+tasks.register<ListAvailableJniBuildTargetsTask>("listAvailableJniBuildTargets") {
+    group = "help"
+    description = "Lists the JNI targets available on the current host"
+    targetNames.set(availableJniBuildTargets.map { it.name })
+}
 
 val workflowResultJars = fileTree(rootProject.file("workflowResult")) {
     include("**/common.jar")
@@ -135,8 +138,7 @@ val jniCollectionSpecs = buildList {
                     resourcePath = "jp/juggler/konaArchive/native/${when (target) {
                         JniBuildTarget.LinuxX64 -> "linux-x86_64/libkona_common_jni.so"
                         JniBuildTarget.LinuxArm64 -> "linux-aarch64/libkona_common_jni.so"
-                        JniBuildTarget.WindowsX64 -> "windows-x86_64/kona_common_jni.dll"
-                        JniBuildTarget.WindowsArm64 -> "windows-aarch64/kona_common_jni.dll"
+                        JniBuildTarget.MingwX64 -> "windows-x86_64/kona_common_jni.dll"
                         else -> error("Unexpected macOS target")
                     }}",
                     outputPath = nativeBuildDirectory.get().dir(target.buildName).file(target.libraryName).asFile.absolutePath,
@@ -183,16 +185,16 @@ if (JniBuildTarget.MacosX64 in availableJniBuildTargets &&
     val registeredTask = tasks.register("buildBlake3JniMacosUniversal2", CommonJniBuildTask::class.java) {
         group = "build"
         description = "Builds the BLAKE3 JNI shared library for macOS universal2 (x86_64 + arm64)"
-        compiler.set(
-            project.jniBuildProperty(JniBuildTarget.MacosX64, "compiler")
-                ?: project.jniBuildProperty(JniBuildTarget.MacosArm64, "compiler")
-                ?: "cc",
-        )
         linkFlags.set(project.jniBuildOptions(JniBuildTarget.MacosX64, "linkOpt", listOf("-shared")))
         buildUnits.set(
             listOf(
                 CommonJniBuildUnit(
-                    arch = "x86_64",
+                    compilerCommand = runKonan(
+                        kotlinVersion = libs.versions.kotlin.get(),
+                        mode = "clang",
+                        tool = "clang",
+                        target = JniBuildTarget.MacosX64.konanTargetName,
+                    ),
                     sources = commonSources + x86AsmSources,
                     cflags = project.jniBuildOptions(
                         JniBuildTarget.MacosX64,
@@ -201,7 +203,12 @@ if (JniBuildTarget.MacosX64 in availableJniBuildTargets &&
                     ),
                 ),
                 CommonJniBuildUnit(
-                    arch = "arm64",
+                    compilerCommand = runKonan(
+                        kotlinVersion = libs.versions.kotlin.get(),
+                        mode = "clang",
+                        tool = "clang",
+                        target = JniBuildTarget.MacosArm64.konanTargetName,
+                    ),
                     sources = commonSources + neonSource,
                     cflags = project.jniBuildOptions(
                         JniBuildTarget.MacosArm64,

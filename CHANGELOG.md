@@ -1,4 +1,6 @@
 ## works not tagged
+- Migrated JNI and Kotlin/Native resource object compilation to the Kotlin/Native `run_konan` toolchain and removed the unsupported Windows ARM64 JNI target.
+- Removed target-less host resource object generation; resource objects are now generated only for Kotlin/Native targets.
 - Updated GitHub Actions to the latest major versions: `actions/checkout@v7`, `actions/setup-java@v6`, `actions/cache@v6`, and `gradle/actions/setup-gradle@v6`.
 - The `jp.juggler.konaResource.local` Gradle plugin marker is now excluded from Maven Central publications while remaining available from `localMaven`.
 - Updated the README to reflect Linux ARM support and renamed the plugin configuration section.

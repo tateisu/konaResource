@@ -9,9 +9,7 @@ permissions:
 
 jobs:
   build:
-    uses: ./.github/workflows/common-jvm-jar-host.yml
+    uses: ./.github/workflows/common-jvm-jar.yml
     with:
       host: MacosX64
       runner: macos-15-intel
-      expected_targets: "MacosX64 MacosArm64"
-      expected_resources: "macos-universal"

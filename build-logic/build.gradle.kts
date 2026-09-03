@@ -3,6 +3,14 @@ plugins {
     `java-gradle-plugin`
 }
 
+kotlin {
+    sourceSets {
+        named("main") {
+            kotlin.srcDir("src/shared/kotlin")
+        }
+    }
+}
+
 group = "jp.juggler.konaResource"
 version = rootProject.version
 
@@ -14,6 +22,13 @@ dependencies {
     compileOnly(libs.kotlinGradlePluginLib)
     testImplementation(gradleTestKit())
     testImplementation(kotlin("test"))
+    testImplementation(libs.kotestAssertions)
+    testImplementation(libs.kotestFrameworkEngine)
+    testImplementation(libs.kotestRunner)
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 gradlePlugin {

@@ -30,21 +30,20 @@ class KonaResourcePluginFunctionalTest : FreeSpec() {
     }
 
     init {
-        "generates archive and ELF object" {
+        "does not register a target-less resource generation task" {
             val projectDir = Files.createTempDirectory("kona-resource-plugin-test")
             try {
                 writeFixture(projectDir)
                 val result = GradleRunner.create()
                     .withProjectDir(projectDir.toFile())
                     .withPluginClasspath()
-                    .withArguments("generateKonaResource", "--stacktrace")
+                    .withArguments("tasks", "--all", "--stacktrace")
                     .forwardOutput()
                     .build()
 
                 result.output.contains("BUILD SUCCESSFUL") shouldBe true
-                Files.isRegularFile(projectDir.resolve("build/generated/konaResource/sample.bin")) shouldBe true
-                Files.isRegularFile(projectDir.resolve("build/generated/konaResource/sample.S")) shouldBe true
-                Files.isRegularFile(projectDir.resolve("build/generated/konaResource/sample.o")) shouldBe true
+                result.output.contains("generateKonaResource") shouldBe false
+                result.output.contains("konaResourceObjects") shouldBe false
             } finally {
                 projectDir.toFile().deleteRecursively()
             }

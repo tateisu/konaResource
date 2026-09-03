@@ -29,12 +29,6 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - name: Install Linux cross compilers
-        if: inputs.host == 'LinuxX64'
-        run: |
-          sudo apt-get update
-          sudo apt-get install --yes clang gcc-aarch64-linux-gnu gcc-mingw-w64-x86-64
-
       - name: Publish local dependencies
         run: ./gradlew --no-daemon --max-workers=1 publishLocalMaven
 

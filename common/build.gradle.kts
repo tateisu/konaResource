@@ -101,12 +101,11 @@ kotlin {
 }
 
 tasks.named<ProcessResources>("jvmProcessResources") {
-    val availableTargets = project.availableJniBuildTargets()
+    val availableTargets = project.availableJniBuildTargets(libs.versions.kotlin.get())
     listOf(
         JniBuildTarget.LinuxX64 to "linux-x86_64",
         JniBuildTarget.LinuxArm64 to "linux-aarch64",
-        JniBuildTarget.WindowsX64 to "windows-x86_64",
-        JniBuildTarget.WindowsArm64 to "windows-aarch64",
+        JniBuildTarget.MingwX64 to "windows-x86_64",
     ).forEach { (target, resourceDirectory) ->
         if (target in availableTargets) {
             dependsOn(":commonJni:buildBlake3Jni${target.buildName.replaceFirstChar { it.uppercase() }}")

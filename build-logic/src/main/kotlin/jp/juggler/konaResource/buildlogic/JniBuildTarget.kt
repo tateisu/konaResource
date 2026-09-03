@@ -8,29 +8,22 @@ import java.io.File
  */
 
 enum class JniBuildTarget(
-    val compiler: String,
-    val arch: String = "",
+    val konanTargetName: String,
     val libraryName: String,
     val jniPlatformInclude: String,
-    private val isMacos: Boolean = false,
 ) {
-    LinuxX64("cc", libraryName = "libkona_common_jni.so", jniPlatformInclude = "linux"),
-    LinuxArm64("aarch64-linux-gnu-gcc", libraryName = "libkona_common_jni.so", jniPlatformInclude = "linux"),
-    WindowsX64("x86_64-w64-mingw32-gcc", libraryName = "kona_common_jni.dll", jniPlatformInclude = "win32"),
-    WindowsArm64("aarch64-w64-mingw32-gcc", libraryName = "kona_common_jni.dll", jniPlatformInclude = "win32"),
+    LinuxX64("linux_x64", libraryName = "libkona_common_jni.so", jniPlatformInclude = "linux"),
+    LinuxArm64("linux_arm64", libraryName = "libkona_common_jni.so", jniPlatformInclude = "linux"),
+    MingwX64("mingw_x64", libraryName = "kona_common_jni.dll", jniPlatformInclude = "win32"),
     MacosX64(
-        compiler = "cc",
-        arch = "x86_64",
+        konanTargetName = "macos_x64",
         libraryName = "libkona_common_jni.dylib",
         jniPlatformInclude = "darwin",
-        isMacos = true,
     ),
     MacosArm64(
-        compiler = "cc",
-        arch = "arm64",
+        konanTargetName = "macos_arm64",
         libraryName = "libkona_common_jni.dylib",
         jniPlatformInclude = "darwin",
-        isMacos = true,
     ),
 
     ;
@@ -38,47 +31,10 @@ enum class JniBuildTarget(
     val buildName: String = name.replaceFirstChar { it.lowercase() }
 
     /**
-     * PATH 上にクロスコンパイラが存在するか確認する。
-     */
-    private fun isCompilerAvailable(compiler: String): Boolean {
-        val compilerFile = File(compiler)
-        if (compiler.contains('/') || compiler.contains('\\')) {
-            val candidates = if (getKonaBuildHost().isWindows && compilerFile.extension.isEmpty()) {
-                listOf(compilerFile, File("$compiler.exe"))
-            } else {
-                listOf(compilerFile)
-            }
-            return candidates.any(File::canExecute)
-        }
-        val pathEntries = System.getenv("PATH")?.split(File.pathSeparator) ?: return false
-        val compilerNames = when {
-            getKonaBuildHost().isWindows -> listOf(compiler, "$compiler.exe")
-            else -> listOf(compiler)
-        }
-        return pathEntries.any { dir -> compilerNames.any { File(dir, it).canExecute() } }
-    }
-
-    /**
-     * Windows x64ホストでは、ホストのMinGW compilerでWindows x64向けJNIをビルドする。
-     * Linuxなどからのクロスビルドでは、ターゲット用compilerを使う。
-     */
-    fun compilerForHost(): String = when {
-        getKonaBuildHost() == KonaBuildHost.WindowsX64 && this == WindowsX64 -> "gcc"
-        else -> compiler
-    }
-
-    /**
-     * Returns the compiler after applying the host/target-specific Gradle property override.
-     */
-    fun compilerForHost(project: Project): String =
-        project.jniBuildProperty(this, "compiler") ?: compilerForHost()
-
-    /**
      * このホストでJNIをビルドできるなら真
      */
-    internal fun isAvailable(project: Project): Boolean =
-        (!isMacos || macosBuildAvailable()) &&
-            isCompilerAvailable(compilerForHost(project)) &&
+    internal fun isAvailable(project: Project, kotlinVersion: String): Boolean =
+        konanTargetName in project.availableKotlinNativeTargets(kotlinVersion) &&
             File(javaHome(project.rootProject.projectDir), "include/jni.h").isFile
 
     /**
@@ -100,8 +56,7 @@ enum class JniBuildTarget(
         return when (this) {
             LinuxX64 -> host == KonaBuildHost.LinuxX64
             LinuxArm64 -> false
-            WindowsX64 -> host == KonaBuildHost.WindowsX64
-            WindowsArm64 -> false
+            MingwX64 -> host == KonaBuildHost.WindowsX64
             MacosX64 -> host == KonaBuildHost.MacosX64
             MacosArm64 -> host == KonaBuildHost.MacosArm64
         }
@@ -113,13 +68,12 @@ private var cacheAvailableList: List<JniBuildTarget>? = null
 /**
  * 現在のビルド環境でビルドできる JniBuildTarget のリストを返す
  * commonJni や test から使われるはず
- * - macosEnabled は自動判定する。availableJniBuildTargets に 引数を追加するな
  */
 @Suppress("unused")
-fun Project.availableJniBuildTargets(): List<JniBuildTarget> =
+fun Project.availableJniBuildTargets(kotlinVersion: String): List<JniBuildTarget> =
     cacheAvailableList ?: run {
         JniBuildTarget.entries.filter {
-            it.isAvailable(this)
+            it.isAvailable(this, kotlinVersion)
         }
     }.also { cacheAvailableList = it }
 
@@ -127,7 +81,7 @@ fun Project.availableJniBuildTargets(): List<JniBuildTarget> =
  * Returns a host/target-specific JNI build property.
  *
  * The property name is `${host}_${target}_${suffix}`, for example
- * `LinuxX64_WindowsArm64_compiler`.
+ * `LinuxX64_MingwX64_compileOpt`.
  */
 fun Project.jniBuildProperty(target: JniBuildTarget, suffix: String): String? {
     val propertyName = "${getKonaBuildHost().name}_${target.name}_$suffix"

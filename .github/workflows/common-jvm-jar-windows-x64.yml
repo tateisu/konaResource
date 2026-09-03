@@ -9,10 +9,7 @@ permissions:
 
 jobs:
   build:
-    uses: ./.github/workflows/common-jvm-jar-host.yml
+    uses: ./.github/workflows/common-jvm-jar.yml
     with:
       host: WindowsX64
       runner: windows-2025
-      expected_targets: "WindowsX64 WindowsArm64"
-      expected_resources: "windows-x86_64 windows-aarch64"
-      extra_gradle_args: "-PWindowsX64_WindowsArm64_compiler=aarch64-w64-mingw32-clang -PWindowsX64_WindowsArm64_linkOpt=-shared"
