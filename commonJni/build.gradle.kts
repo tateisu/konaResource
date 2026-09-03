@@ -44,11 +44,11 @@ fun JniBuildTarget.registerJniBuild(
 ): TaskProvider<*> {
     val taskName = "buildBlake3Jni${buildName.replaceFirstChar { it.uppercase() }}"
     // run_konan clang does not apply Kotlin/Native's host-specific linker property.
-    // Select the linker that the Kotlin/Native distribution provides for Linux cross-links.
+    // Select the linker that the Kotlin/Native distribution provides for cross-links.
     val hostLinker = when {
         this in listOf(JniBuildTarget.LinuxX64, JniBuildTarget.LinuxArm64) &&
             getKonaBuildHost() == KonaBuildHost.WindowsX64 -> "-fuse-ld=gold"
-        this in listOf(JniBuildTarget.LinuxX64, JniBuildTarget.LinuxArm64) &&
+        this in listOf(JniBuildTarget.LinuxX64, JniBuildTarget.LinuxArm64, JniBuildTarget.MingwX64) &&
             getKonaBuildHost() in listOf(KonaBuildHost.MacosX64, KonaBuildHost.MacosArm64) -> "-fuse-ld=lld"
         else -> null
     }
