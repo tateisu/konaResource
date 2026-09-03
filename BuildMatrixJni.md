@@ -6,9 +6,9 @@
 | Host\Target | LinuxX64 | LinuxArm64 | MingwX64 | MacosX64 | MacosArm64 |
 |-------------|----------|------------|----------|----------|------------|
 | LinuxX64    | ✅       | ✅         | ✅       | ❌[A]    | ❌[A]      |
+| MingwX64    | ✅       | ✅         | ✅       | ❌[A]    | ❌[A]      |
 | MacosArm64  | ✅       | ✅         | ✅       | ✅       | ✅         |
 | MacosX64    | ✅       | ✅         | ✅       | ✅       | ✅         |
-| MingwX64    | ✅       | ✅         | ✅       | ❌[A]    | ❌[A]      |
 
 - ✅ は `run_konan` と JNI ヘッダが利用可能なターゲット
 - ❌ は現在の Kotlin/Native distribution では利用できないターゲット。角括弧内は理由の注釈番号

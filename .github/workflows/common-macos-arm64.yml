@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   build:
-    uses: ./.github/workflows/common-jvm-jar.yml
+    uses: ./.github/workflows/common.yml
     with:
       host: MacosArm64
       runner: macos-15

@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   build:
-    uses: ./.github/workflows/common-jvm-jar.yml
+    uses: ./.github/workflows/common.yml
     with:
       host: MingwX64
       runner: windows-2025
