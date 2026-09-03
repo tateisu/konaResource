@@ -89,9 +89,20 @@ abstract class CommonJniBuildTask : DefaultTask() {
                 objectFile
             }
             val intermediateLibrary = File(unitDirectory, "lib.dylib")
+            val linkerResponseFile = linkFlags.get()
+                .firstOrNull { it.startsWith("-fuse-ld=") }
+                ?.let { linkerFlag ->
+                    File(unitDirectory, "linker-options.rsp").apply {
+                        writeText("$linkerFlag${System.lineSeparator()}")
+                    }
+                }
+            val effectiveLinkFlags = buildList {
+                linkerResponseFile?.let { add("@${it.absolutePath}") }
+                addAll(linkFlags.get().filterNot { it.startsWith("-fuse-ld=") })
+            }
             exec(
                 unit.compilerCommand,
-                linkFlags.get() +
+                effectiveLinkFlags +
                     listOf("-o", intermediateLibrary.absolutePath) +
                     objects.map { it.absolutePath },
             )
