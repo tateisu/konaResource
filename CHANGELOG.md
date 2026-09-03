@@ -19,6 +19,7 @@
 - Platform-specific test directory creation now has a common success/error contract.
 - Common JVM jar workflows now bootstrap the matching Kotlin/Native distribution and its dependencies before configuration.
 - JNI clang defines now pass through Kotlin/Native's `run_konan` wrapper correctly.
+- Windows JNI builds pass C preprocessor defines through `run_konan.bat` using clang's `--define-macro` spelling.
 - JNI compiler failures now include the wrapped compiler output in the Gradle error.
 
 ## v0.1.6
