@@ -34,15 +34,8 @@ enum class JniBuildTarget(
      * このホストでJNIをビルドできるなら真
      */
     internal fun isAvailable(project: Project, kotlinVersion: String): Boolean =
-        isHostCompatible() &&
-            konanTargetName in project.availableKotlinNativeTargets(kotlinVersion) &&
+        konanTargetName in project.availableKotlinNativeTargets(kotlinVersion) &&
             File(javaHome(project.rootProject.projectDir), "include/jni.h").isFile
-
-    private fun isHostCompatible(): Boolean = when (getKonaBuildHost()) {
-        KonaBuildHost.LinuxX64 -> this == LinuxX64 || this == LinuxArm64 || this == MingwX64
-        KonaBuildHost.WindowsX64 -> this == MingwX64
-        KonaBuildHost.MacosX64, KonaBuildHost.MacosArm64 -> this == MacosX64 || this == MacosArm64
-    }
 
     /**
      * ルートプロジェクトに配置したターゲット固有の JDK のパスを返す。

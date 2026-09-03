@@ -5,13 +5,18 @@
 
 | Host\Target | LinuxX64 | LinuxArm64 | MingwX64 | MacosX64 | MacosArm64 |
 |-------------|----------|------------|----------|----------|------------|
-| LinuxX64    | ✅       | ✅         | ✅       | ❌       | ❌         |
-| MacosArm64  | ❌       | ❌         | ❌       | ✅       | ✅         |
-| MacosX64    | ❌       | ❌         | ❌       | ✅       | ✅         |
-| WindowsX64  | ❌       | ❌         | ✅       | ❌       | ❌         |
+| LinuxX64    | ✅       | ✅         | ✅       | ❌[A]    | ❌[A]      |
+| MacosArm64  | ❓       | ❓         | ❓       | ✅       | ✅         |
+| MacosX64    | ❓       | ❓         | ❓       | ✅       | ✅         |
+| WindowsX64  | ❓       | ❓         | ✅       | ❓       | ❓         |
 
 - ✅ は `run_konan` と JNI ヘッダが利用可能なターゲット
-- ❌ は現在の Kotlin/Native distribution では利用できないターゲット
+- ❌ は現在の Kotlin/Native distribution では利用できないターゲット。角括弧内は理由の注釈番号
+- ❓ は host workflow での検証が未完了のターゲット
+
+❌ セルの注釈:
+
+- [A] LinuxX64 host の `kotlinc-native -list-targets` に macOS target が出現しないため。
 
 利用可能なターゲットは以下で確認できる。
 
