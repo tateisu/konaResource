@@ -35,18 +35,22 @@ jobs:
           case "${{ inputs.host }}" in
             LinuxX64)
               distribution=kotlin-native-prebuilt-linux-x86_64
+              platform=linux-x86_64
               archive=tar.gz
               ;;
             MacosX64)
               distribution=kotlin-native-prebuilt-macos-x86_64
+              platform=macos-x86_64
               archive=tar.gz
               ;;
             MacosArm64)
               distribution=kotlin-native-prebuilt-macos-aarch64
+              platform=macos-aarch64
               archive=tar.gz
               ;;
             WindowsX64)
               distribution=kotlin-native-prebuilt-windows-x86_64
+              platform=windows-x86_64
               archive=zip
               ;;
             *)
@@ -57,7 +61,7 @@ jobs:
           mkdir -p "$HOME/.konan"
           archive_file="/tmp/$distribution-$version.$archive"
           curl --fail --location --silent --show-error \
-            "https://repo1.maven.org/maven2/org/jetbrains/kotlin/kotlin-native-prebuilt/$version/$distribution-$version.$archive" \
+            "https://repo1.maven.org/maven2/org/jetbrains/kotlin/kotlin-native-prebuilt/$version/kotlin-native-prebuilt-$version-$platform.$archive" \
             --output "$archive_file"
           if [[ "$archive" == zip ]]; then
             unzip -q "$archive_file" -d "$HOME/.konan"
