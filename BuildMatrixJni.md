@@ -16,7 +16,7 @@
 
 ❌ セルの注釈:
 
-- [A] LinuxX64 host の `kotlinc-native -list-targets` に macOS target が出現しないため。
+- [A] LinuxX64 host の `kotlinc-native -list-targets` に macOS target が含まれない
 
 利用可能なターゲットは以下で確認できる。
 
