@@ -16,6 +16,10 @@ jobs:
   build:
     name: ${{ inputs.host }}
     runs-on: ${{ inputs.runner }}
+    env:
+      # Note: localにpublishするものを署名済みartifactにする。あとで収集してまとめて公開できるようにするため。
+      ORG_GRADLE_PROJECT_centralPortalUsername: ${{ secrets.CENTRAL_PORTAL_USERNAME }}
+      ORG_GRADLE_PROJECT_centralPortalPassword: ${{ secrets.CENTRAL_PORTAL_PASSWORD }}
     defaults:
       run:
         shell: bash
@@ -89,9 +93,6 @@ jobs:
         run: ./gradlew --no-daemon --max-workers=1 :common:build
 
       - name: Publish common artifacts to local Maven repository
-        env:
-          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.GPG_KEY_01C52FD776E9651B84D63971A8E469517CB52830 }}
-          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.SIGNING_PASSWORD }}
         run: ./gradlew --no-daemon --max-workers=1 :common:publishAllPublicationsToLocalMavenRepository
 
       - name: Copy common.jar and native publications
