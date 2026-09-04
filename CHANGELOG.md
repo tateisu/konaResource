@@ -1,4 +1,5 @@
 ## works not tagged
+- `runNativeBinary.pl` now detects the execution architecture when `--myArch` is omitted.
 - The `common` workflow no longer signs artifacts when publishing to the local Maven repository; signing remains enabled for Maven Central publications only.
 - The `common-all` workflow now preserves each host's common artifact without merging its publications.
 - Maven Central publication now merges common native publications into `workflowResult-merged` without modifying host-specific workflow results.
