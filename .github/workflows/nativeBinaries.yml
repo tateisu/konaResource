@@ -33,7 +33,7 @@ jobs:
         run: ./gradlew --no-daemon --max-workers=1 :common:downloadKotlinNativeDistribution -PbootstrapKotlinNative
 
       - name: publishLocalMaven
-        run: ./gradlew --no-daemon --max-workers=1 publishLocalMaven
+        run: ./gradlew --no-daemon --max-workers=1 publishLocalMaven -PskipMacosUniversal2
 
       - name: Build all
         id: build
