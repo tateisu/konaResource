@@ -29,6 +29,9 @@ jobs:
           distribution: temurin
           java-version: "21"
 
+      - name: Download Kotlin/Native distribution and dependencies
+        run: ./gradlew --no-daemon --max-workers=1 :common:downloadKotlinNativeDistribution -PbootstrapKotlinNative
+
       - name: publishLocalMaven
         run: ./gradlew --no-daemon --max-workers=1 publishLocalMaven
 
