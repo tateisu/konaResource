@@ -9,5 +9,6 @@ jdk-downloads/
 jdk/*
 localMaven/
 workflowResult/
+workflowResult-merged/
 
 !/jdk/.place-holder
