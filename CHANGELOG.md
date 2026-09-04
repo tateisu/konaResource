@@ -1,4 +1,5 @@
 ## works not tagged
+- Native SHA-256 implementations are now built as target-specific static libraries with CPU crypto instructions enabled.
 - `runNativeBinary.pl` now detects the execution architecture when `--myArch` is omitted.
 - The `common` workflow no longer signs artifacts when publishing to the local Maven repository; signing remains enabled for Maven Central publications only.
 - The `common-all` workflow now preserves each host's common artifact without merging its publications.

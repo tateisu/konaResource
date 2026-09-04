@@ -1,2 +1,2 @@
-headers = blake3_kona_impl.h
+headers = blake3_kona.h
 package = jp.juggler.konaResource.blake3

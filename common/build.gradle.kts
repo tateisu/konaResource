@@ -1,6 +1,7 @@
 import jp.juggler.konaResource.buildlogic.JniBuildTarget
 import jp.juggler.konaResource.buildlogic.availableJniBuildTargets
 import jp.juggler.konaResource.buildlogic.konaTargets
+import jp.juggler.konaResource.buildlogic.runKonan
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
@@ -65,6 +66,8 @@ kotlin {
     }
 
     targets.withType<KotlinNativeTarget>().configureEach {
+        val nativeTargetName = targetName
+        val nativeTargetSuffix = targetName.replaceFirstChar { it.uppercase() }
         compilations.getByName("main") {
             cinterops {
                 create("lz4") {
@@ -75,14 +78,168 @@ kotlin {
                     )
                 }
                 create("blake3") {
-                    definitionFile.set(cinteropDirectory.resolve("blake3.def"))
+                    definitionFile.set(
+                        layout.buildDirectory.file("generated/cinterop/$nativeTargetName/blake3.def"),
+                    )
                     compilerOpts(
                         *nativeCCompilerOptions.toTypedArray(),
                         "-I${cinteropDirectory.absolutePath}",
                     )
                 }
                 create("sha256Intrinsics") {
-                    definitionFile.set(cinteropDirectory.resolve("sha256_intrinsics.def"))
+                    val shaDefinition = layout.buildDirectory.file(
+                        "generated/cinterop/$nativeTargetName/sha256_intrinsics.def",
+                    )
+                    val blakeDefinition = layout.buildDirectory.file(
+                        "generated/cinterop/$nativeTargetName/blake3.def",
+                    )
+                    val nativeLibraryDirectory = layout.buildDirectory.dir("native/kona_common_native/$nativeTargetName")
+                    val nativeLibrary = nativeLibraryDirectory.map { it.file("libkona_common_native.a") }
+                    val shaObject = nativeLibraryDirectory.map { it.file("sha256.o") }
+                    val shaWrapperObject = nativeLibraryDirectory.map { it.file("sha256_intrinsics.o") }
+                    val blakeSources = when (nativeTargetName) {
+                        "linuxX64", "macosX64" -> listOf(
+                            "blake3.c", "blake3_dispatch.c", "blake3_portable.c",
+                            "blake3_sse2_x86-64_unix.S", "blake3_sse41_x86-64_unix.S",
+                            "blake3_avx2_x86-64_unix.S", "blake3_avx512_x86-64_unix.S",
+                        )
+                        "linuxArm64", "macosArm64" -> listOf(
+                            "blake3.c", "blake3_dispatch.c", "blake3_portable.c", "blake3_neon.c",
+                        )
+                        "mingwX64" -> listOf("blake3.c", "blake3_dispatch.c", "blake3_portable.c")
+                        else -> emptyList()
+                    }.map { cinteropDirectory.resolve("blake3/$it") }
+                    val blakeObjects = blakeSources.map { source ->
+                        nativeLibraryDirectory.map { it.file("${source.name}.o") }
+                    }
+                    val fastShaSource = when (nativeTargetName) {
+                        "linuxX64", "macosX64", "mingwX64" -> cinteropDirectory.resolve("SHA-Intrinsics/sha256-x86.c")
+                        "linuxArm64", "macosArm64" -> cinteropDirectory.resolve("SHA-Intrinsics/sha256-arm.c")
+                        else -> null
+                    }
+                    if (fastShaSource == null) {
+                        definitionFile.set(cinteropDirectory.resolve("sha256_intrinsics.def"))
+                    } else {
+                        val konanTarget = when (nativeTargetName) {
+                            "linuxX64" -> "linux_x64"
+                            "linuxArm64" -> "linux_arm64"
+                            "mingwX64" -> "mingw_x64"
+                            "macosX64" -> "macos_x64"
+                            "macosArm64" -> "macos_arm64"
+                            else -> error("Unexpected native target: $nativeTargetName")
+                        }
+                        val clang = runKonan(
+                            kotlinVersion = libs.versions.kotlin.get(),
+                            mode = "clang",
+                            tool = "clang",
+                            target = konanTarget,
+                        )
+                        val compileSha = tasks.register<Exec>("compileSha256Intrinsics$nativeTargetName") {
+                            inputs.file(fastShaSource)
+                            outputs.file(shaObject)
+                            doFirst { shaObject.get().asFile.parentFile.mkdirs() }
+                            commandLine(
+                                clang + listOf(
+                                    "-c", fastShaSource.absolutePath, "-O3", "-fPIC",
+                                ) + if (nativeTargetName.endsWith("X64")) {
+                                    listOf("-msse4.1", "-msha")
+                                } else {
+                                    listOf("-march=armv8-a+crc+crypto")
+                                } + listOf(
+                                    "-o", shaObject.get().asFile.absolutePath,
+                                ),
+                            )
+                        }
+                        val compileShaWrapper = tasks.register<Exec>("compileSha256IntrinsicsWrapper$nativeTargetName") {
+                            inputs.file(cinteropDirectory.resolve("sha256_intrinsics.c"))
+                            outputs.file(shaWrapperObject)
+                            doFirst { shaWrapperObject.get().asFile.parentFile.mkdirs() }
+                            val process = "sha256_process_${if (nativeTargetName.endsWith("X64")) "x86" else "arm"}"
+                            commandLine(
+                                clang + listOf(
+                                    "-c", cinteropDirectory.resolve("sha256_intrinsics.c").absolutePath,
+                                    "-O3", "-fPIC", "--define-macro=KONA_SHA256_PROCESS=$process",
+                                    "-I${cinteropDirectory.absolutePath}", "-o", shaWrapperObject.get().asFile.absolutePath,
+                                ),
+                            )
+                        }
+                        val compileBlake = blakeSources.map { source ->
+                            tasks.register<Exec>("compileBlake3${source.name.replace('.', '_')}$nativeTargetName") {
+                                inputs.file(source)
+                                outputs.file(nativeLibraryDirectory.map { it.file("${source.name}.o") })
+                                doFirst { nativeLibraryDirectory.get().asFile.mkdirs() }
+                                commandLine(
+                                    clang + listOf(
+                                        "-c", source.absolutePath, "-O3", "-fPIC",
+                                    ) + when {
+                                        nativeTargetName == "linuxArm64" || nativeTargetName == "macosArm64" ->
+                                            listOf("--define-macro=BLAKE3_USE_NEON=1")
+                                        nativeTargetName == "mingwX64" -> listOf(
+                                            "--define-macro=BLAKE3_NO_AVX512",
+                                            "--define-macro=BLAKE3_NO_AVX2",
+                                            "--define-macro=BLAKE3_NO_SSE41",
+                                            "--define-macro=BLAKE3_NO_SSE2",
+                                        )
+                                        else -> emptyList()
+                                    } + listOf(
+                                        "-I${cinteropDirectory.absolutePath}",
+                                        "-I${cinteropDirectory.resolve("blake3").absolutePath}",
+                                        "-o", nativeLibraryDirectory.get().asFile.resolve("${source.name}.o").absolutePath,
+                                    ),
+                                )
+                            }
+                        }
+                        val archiveNative = tasks.register<Exec>("archiveKonaCommonNative$nativeTargetName") {
+                            dependsOn(compileSha, compileShaWrapper)
+                            dependsOn(compileBlake)
+                            inputs.files(shaObject, shaWrapperObject, blakeObjects)
+                            outputs.file(nativeLibrary)
+                            doFirst { nativeLibrary.get().asFile.parentFile.mkdirs() }
+                            commandLine(
+                                runKonan(
+                                    kotlinVersion = libs.versions.kotlin.get(),
+                                    mode = "llvm",
+                                    tool = "llvm-ar",
+                                ) + listOf(
+                                    "rcs", nativeLibrary.get().asFile.absolutePath,
+                                    // Add other Kona native objects to this archive as they are introduced.
+                                    shaObject.get().asFile.absolutePath,
+                                    shaWrapperObject.get().asFile.absolutePath,
+                                ) + blakeObjects.map { it.get().asFile.absolutePath },
+                            )
+                        }
+                        val generateShaDefinition = tasks.register("generateSha256IntrinsicsDefinition$nativeTargetName") {
+                            dependsOn(archiveNative)
+                            outputs.file(shaDefinition)
+                            doLast {
+                                shaDefinition.get().asFile.apply {
+                                    parentFile.mkdirs()
+                                    writeText(
+                                            "headers = sha256_intrinsics.h\n" +
+                                            "staticLibraries = libkona_common_native.a\n" +
+                                            "libraryPaths = ${nativeLibraryDirectory.get().asFile.absolutePath}\n" +
+                                            "package = jp.juggler.konaResource.sha256intrinsics\n",
+                                    )
+                                }
+                                blakeDefinition.get().asFile.apply {
+                                    parentFile.mkdirs()
+                                    writeText(
+                                        "headers = blake3_kona.h\n" +
+                                            "staticLibraries = libkona_common_native.a\n" +
+                                            "libraryPaths = ${nativeLibraryDirectory.get().asFile.absolutePath}\n" +
+                                            "package = jp.juggler.konaResource.blake3\n",
+                                    )
+                                }
+                            }
+                        }
+                        definitionFile.set(shaDefinition)
+                        tasks.named("cinteropSha256Intrinsics$nativeTargetSuffix") {
+                            dependsOn(generateShaDefinition)
+                        }
+                        tasks.named("cinteropBlake3$nativeTargetSuffix") {
+                            dependsOn(generateShaDefinition)
+                        }
+                    }
                     compilerOpts(
                         *nativeCCompilerOptions.toTypedArray(),
                         "-I${cinteropDirectory.absolutePath}",
