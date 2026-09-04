@@ -49,19 +49,23 @@ jobs:
             local category="$4"
             local count=0
             local binary
-            shopt -s nullglob
-            for binary in \
-              "$module/build/bin"/*/"$configuration"/"$executable_name.kexe" \
-              "$module/build/bin"/*/"$configuration"/"$executable_name.exe"; do
+            while IFS= read -r -d '' binary; do
               local target_dir
               target_dir="$(basename "$(dirname "$(dirname "$binary")")")"
               mkdir -p "$result_dir/$category/$target_dir"
               cp "$binary" "$result_dir/$category/$target_dir/"
               count=$((count + 1))
-            done
-            shopt -u nullglob
+            done < <(
+              if [[ -d "$module/build/bin" ]]; then
+                find "$module/build/bin" -type f \
+                  \( -path "*/$configuration/$executable_name.kexe" \
+                  -o -path "*/$configuration/$executable_name.exe" \) \
+                  -print0
+              fi
+            )
             if [[ "$count" -eq 0 ]]; then
               printf 'No executable found: %s/%s/%s.{kexe,exe}\n' "$module" "$configuration" "$executable_name" >&2
+              return 1
             fi
           }
           result_dir="nativeBinaries/$HOST"
