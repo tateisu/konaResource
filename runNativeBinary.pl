@@ -9,6 +9,7 @@ use File::Path qw(remove_tree);
 use File::Spec;
 use Config;
 use Getopt::Long;
+use Time::HiRes qw(time);
 
 # undef to auto detect, else one of linuxX64, linuxArm64, mingwX64, macosArm64, macosX64
 my $myArch;
@@ -132,12 +133,19 @@ my $runId;
 if($runWorkflow){
     say "# start workflow $workflowYml";
     check_branch_synchronized($branch);
-    my $output = capture_command('gh', 'workflow', 'run', $workflowYml, '--ref', $branch);
-    $output =~ m|/runs/(\d+)| or die "$runId not found: $output\n";
-    $runId = $1;
+    my $workflow_started_at = time;
+    my $workflow_error;
+    eval {
+        my $output = capture_command('gh', 'workflow', 'run', $workflowYml, '--ref', $branch);
+        $output =~ m|/runs/(\d+)| or die "$runId not found: $output\n";
+        $runId = $1;
 
-    say "# waiting end of runId=$runId";
-    command('gh', 'run', 'watch', $runId, '--exit-status');
+        say "# waiting end of runId=$runId";
+        command('gh', 'run', 'watch', $runId, '--exit-status');
+        1;
+    } or $workflow_error = $@ || "workflow failed\n";
+    say sprintf "# workflow elapsed: %.3f seconds", time - $workflow_started_at;
+    die $workflow_error if $workflow_error;
 }else{
     say "# find latest success run of workflow $workflowYml";
     my $output = capture_command(

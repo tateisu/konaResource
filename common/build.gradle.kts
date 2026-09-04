@@ -128,7 +128,7 @@ kotlin {
                             "macosArm64" -> "macos_arm64"
                             else -> error("Unexpected native target: $nativeTargetName")
                         }
-                        val clang = runKonan(
+                        fun clang() = runKonan(
                             kotlinVersion = libs.versions.kotlin.get(),
                             mode = "clang",
                             tool = "clang",
@@ -138,8 +138,9 @@ kotlin {
                             inputs.file(fastShaSource)
                             outputs.file(shaObject)
                             doFirst { shaObject.get().asFile.parentFile.mkdirs() }
-                            commandLine(
-                                clang + listOf(
+                            doFirst {
+                                commandLine(
+                                clang() + listOf(
                                     "-c", fastShaSource.absolutePath, "-O3", "-fPIC",
                                 ) + if (nativeTargetName.endsWith("X64")) {
                                     listOf("-msse4.1", "-msha")
@@ -148,28 +149,32 @@ kotlin {
                                 } + listOf(
                                     "-o", shaObject.get().asFile.absolutePath,
                                 ),
-                            )
+                                )
+                            }
                         }
                         val compileShaWrapper = tasks.register<Exec>("compileSha256IntrinsicsWrapper$nativeTargetName") {
                             inputs.file(cinteropDirectory.resolve("sha256_intrinsics.c"))
                             outputs.file(shaWrapperObject)
                             doFirst { shaWrapperObject.get().asFile.parentFile.mkdirs() }
                             val process = "sha256_process_${if (nativeTargetName.endsWith("X64")) "x86" else "arm"}"
-                            commandLine(
-                                clang + listOf(
+                            doFirst {
+                                commandLine(
+                                clang() + listOf(
                                     "-c", cinteropDirectory.resolve("sha256_intrinsics.c").absolutePath,
                                     "-O3", "-fPIC", "--define-macro=KONA_SHA256_PROCESS=$process",
                                     "-I${cinteropDirectory.absolutePath}", "-o", shaWrapperObject.get().asFile.absolutePath,
                                 ),
-                            )
+                                )
+                            }
                         }
                         val compileBlake = blakeSources.map { source ->
                             tasks.register<Exec>("compileBlake3${source.name.replace('.', '_')}$nativeTargetName") {
                                 inputs.file(source)
                                 outputs.file(nativeLibraryDirectory.map { it.file("${source.name}.o") })
                                 doFirst { nativeLibraryDirectory.get().asFile.mkdirs() }
-                                commandLine(
-                                    clang + listOf(
+                                doFirst {
+                                    commandLine(
+                                    clang() + listOf(
                                         "-c", source.absolutePath, "-O3", "-fPIC",
                                     ) + when {
                                         nativeTargetName == "linuxArm64" || nativeTargetName == "macosArm64" ->
@@ -186,7 +191,8 @@ kotlin {
                                         "-I${cinteropDirectory.resolve("blake3").absolutePath}",
                                         "-o", nativeLibraryDirectory.get().asFile.resolve("${source.name}.o").absolutePath,
                                     ),
-                                )
+                                    )
+                                }
                             }
                         }
                         val archiveNative = tasks.register<Exec>("archiveKonaCommonNative$nativeTargetName") {
@@ -194,19 +200,21 @@ kotlin {
                             dependsOn(compileBlake)
                             inputs.files(shaObject, shaWrapperObject, blakeObjects)
                             outputs.file(nativeLibrary)
-                            doFirst { nativeLibrary.get().asFile.parentFile.mkdirs() }
-                            commandLine(
-                                runKonan(
-                                    kotlinVersion = libs.versions.kotlin.get(),
-                                    mode = "llvm",
-                                    tool = "llvm-ar",
-                                ) + listOf(
-                                    "rcs", nativeLibrary.get().asFile.absolutePath,
-                                    // Add other Kona native objects to this archive as they are introduced.
-                                    shaObject.get().asFile.absolutePath,
-                                    shaWrapperObject.get().asFile.absolutePath,
-                                ) + blakeObjects.map { it.get().asFile.absolutePath },
-                            )
+                            doFirst {
+                                nativeLibrary.get().asFile.parentFile.mkdirs()
+                                commandLine(
+                                    runKonan(
+                                        kotlinVersion = libs.versions.kotlin.get(),
+                                        mode = "llvm",
+                                        tool = "llvm-ar",
+                                    ) + listOf(
+                                        "rcs", nativeLibrary.get().asFile.absolutePath,
+                                        // Add other Kona native objects to this archive as they are introduced.
+                                        shaObject.get().asFile.absolutePath,
+                                        shaWrapperObject.get().asFile.absolutePath,
+                                    ) + blakeObjects.map { it.get().asFile.absolutePath },
+                                )
+                            }
                         }
                         val generateShaDefinition = tasks.register("generateSha256IntrinsicsDefinition$nativeTargetName") {
                             dependsOn(archiveNative)
