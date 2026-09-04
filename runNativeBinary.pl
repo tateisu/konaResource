@@ -16,6 +16,9 @@ my $myArch;
 # workflow yml that generate binaries.
 my $workflowYml = "nativeBinaries-all.yml";
 
+# branch to run or query.
+my $branch = "main";
+
 # folder download workflow result into.
 my $downloadDir = "nativeBinaries";
 
@@ -41,6 +44,8 @@ Options:
     --runWorkflow       Start the workflow and wait for it to complete
     --workflowYml FILE  Workflow file to run or query
                         (default: nativeBinaries-all.yml)
+    --branch BRANCH      Branch to run or query
+                        (default: main)
     -h, --help          Show this help
 USAGE
 }
@@ -51,6 +56,7 @@ GetOptions(
     "skipDownload"   => \$skipDownload,
     "runWorkflow"    => \$runWorkflow,
     "workflowYml=s" => \$workflowYml,
+    "branch=s"       => \$branch,
     "h|help"         => \$help,
 ) or do {
     print STDERR "bad options.\n";
@@ -100,12 +106,33 @@ sub capture_command (@args) {
     return $output;
 }
 
+sub check_branch_synchronized ($branch) {
+    say "# check local and remote branch synchronization: $branch";
+    command('git', 'fetch', 'origin', $branch);
+
+    my $local_head = trim capture_command('git', 'rev-parse', '--verify', "$branch^{commit}");
+    my $remote_head = trim capture_command('git', 'rev-parse', '--verify', "origin/$branch^{commit}");
+    if ($local_head ne $remote_head) {
+        die "local branch '$branch' and remote branch 'origin/$branch' are not synchronized\n"
+            . "  local:  $local_head\n"
+            . "  remote: $remote_head\n";
+    }
+
+    my $current_branch = trim capture_command('git', 'branch', '--show-current');
+    if ($current_branch eq $branch) {
+        my $status = capture_command('git', 'status', '--porcelain');
+        die "working tree for branch '$branch' has uncommitted changes:\n$status"
+            if length $status;
+    }
+}
+
 ###############################################
 
 my $runId;
 if($runWorkflow){
     say "# start workflow $workflowYml";
-    my $output = capture_command('gh', 'workflow', 'run', $workflowYml, '--ref', 'main');
+    check_branch_synchronized($branch);
+    my $output = capture_command('gh', 'workflow', 'run', $workflowYml, '--ref', $branch);
     $output =~ m|/runs/(\d+)| or die "$runId not found: $output\n";
     $runId = $1;
 
@@ -116,7 +143,7 @@ if($runWorkflow){
     my $output = capture_command(
         'gh', 'run', 'list',
         '--workflow', $workflowYml,
-        '--branch', 'main',
+        '--branch', $branch,
         '--status', 'success',
         '--limit', '1',
         '--json', 'databaseId',
