@@ -42,38 +42,21 @@ jobs:
         env:
           HOST: ${{ inputs.host }}
         run: |
-          copy_executables() {
-            local module="$1"
-            local configuration="$2"
-            local executable_name="$3"
-            local category="$4"
-            local count=0
-            local binary
-            while IFS= read -r -d '' binary; do
-              local target_dir
-              target_dir="$(basename "$(dirname "$(dirname "$binary")")")"
-              mkdir -p "$result_dir/$category/$target_dir"
-              cp "$binary" "$result_dir/$category/$target_dir/"
-              count=$((count + 1))
-            done < <(
-              if [[ -d "$module/build/bin" ]]; then
-                find "$module/build/bin" -type f \
-                  \( -path "*/$configuration/$executable_name.kexe" \
-                  -o -path "*/$configuration/$executable_name.exe" \) \
-                  -print0
-              fi
-            )
-            if [[ "$count" -eq 0 ]]; then
-              printf 'No executable found: %s/%s/%s.{kexe,exe}\n' "$module" "$configuration" "$executable_name" >&2
-              return 1
-            fi
-          }
           result_dir="nativeBinaries/$HOST"
-          mkdir -p "$result_dir/test" "$result_dir/benchmark" "$result_dir/sample2" "$result_dir/empty"
-          copy_executables empty debugExecutable empty empty
-          copy_executables sample2 debugExecutable sample2 sample2
-          copy_executables test debugExecutable konaCommonTest test
-          copy_executables benchmark releaseExecutable konaBenchmark benchmark
+          mkdir -p "$result_dir"
+          count=0
+          while IFS= read -r -d '' binary; do
+            module="${binary%%/build/bin/*}"
+            relative="${binary#"$module/build/bin/"}"
+            mkdir -p "$result_dir/$module/$(dirname "$relative")"
+            cp "$binary" "$result_dir/$module/$relative"
+            count=$((count + 1))
+          done < <(find */build -type f -path '*/bin/*' -print0)
+          if [[ "$count" -eq 0 ]]; then
+            printf 'No files found below */build/bin\n' >&2
+            exit 1
+          fi
+          printf 'Collected %s files below */build/bin\n' "$count"
 
       - name: Upload build results
         if: always()
