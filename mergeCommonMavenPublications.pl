@@ -7,8 +7,8 @@ use File::Path qw(make_path remove_tree);
 use File::Spec;
 use JSON::PP qw(decode_json);
 
-my $result_root = 'workflowResult';
-my $merged_root = 'workflowResult-merged';
+my $result_root = $ENV{WORKFLOW_RESULT_ROOT} // 'workflowResult';
+my $merged_root = $ENV{WORKFLOW_MERGED_ROOT} // 'workflowResult-merged';
 my $merged_maven = "$merged_root/maven";
 my $group = "$merged_maven/jp/juggler/konaResource";
 
