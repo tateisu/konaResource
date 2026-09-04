@@ -119,7 +119,7 @@ val publishLocalMaven = tasks.register("publishLocalMaven") {
 
 // Replace host-limited common Native publications with the publications
 // collected from every Kotlin/Native build host before Nmcp stages them.
-val workflowCommonMaven = layout.projectDirectory.dir("workflowResult/MacosArm64/maven")
+val workflowCommonMaven = layout.projectDirectory.dir("workflowResult-merged/maven")
 val installWorkflowCommonNativePublications = tasks.register<Copy>("installWorkflowCommonNativePublications") {
     enabled = workflowCommonMaven.asFile.isDirectory
     dependsOn(":common:publishAllPublicationsToNmcpRepository")

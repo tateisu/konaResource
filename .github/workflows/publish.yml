@@ -37,6 +37,8 @@ jobs:
           path: workflowResult
       - name: Verify collected JNI libraries
         run: perl verifyCommonJni.pl
+      - name: Merge common Maven publications
+        run: perl mergeCommonMavenPublications.pl
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
       - name: Cache Kotlin/Native

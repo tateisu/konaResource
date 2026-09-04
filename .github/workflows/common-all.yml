@@ -43,43 +43,6 @@ jobs:
           name: common-artifact-MingwX64
           path: workflowResult/MingwX64
 
-      - name: Merge native common publications
-        shell: bash
-        run: |
-          group_dir="workflowResult/MacosArm64/maven/jp/juggler/konaResource"
-
-          # macOS arm64 can produce every configured Kotlin/Native target.
-          cp -R workflowResult/MacosArm64/maven/jp/juggler/konaResource/common "$group_dir/"
-
-          for host in LinuxX64 MacosArm64 MingwX64; do
-            for module_dir in \
-              workflowResult/$host/maven/jp/juggler/konaResource/common-linux* \
-              workflowResult/$host/maven/jp/juggler/konaResource/common-macos* \
-              workflowResult/$host/maven/jp/juggler/konaResource/common-mingw*; do
-              test -d "$module_dir" || continue
-              module_name="${module_dir##*/}"
-              test -e "$group_dir/$module_name" || cp -R "$module_dir" "$group_dir/"
-            done
-          done
-
-          for module_name in common-linuxarm64 common-linuxx64 common-macosarm64 common-mingwx64; do
-            test -d "$group_dir/$module_name" || {
-              echo "Missing native publication: $module_name" >&2
-              exit 1
-            }
-          done
-
-          root_module="$(find "$group_dir/common" -type f -name '*.module' -print -quit)"
-          test -n "$root_module"
-          for module_name in common-linuxarm64 common-linuxx64 common-macosarm64 common-mingwx64; do
-            jq -e --arg module "$module_name" \
-              '[.variants[]?."available-at"?.module] | index($module) != null' \
-              "$root_module" >/dev/null || {
-              echo "Root metadata does not reference native publication: $module_name" >&2
-              exit 1
-            }
-          done
-
       - name: Upload collected common artifacts
         uses: actions/upload-artifact@v4
         with:

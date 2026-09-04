@@ -19,9 +19,9 @@
 | Host\Target | LinuxX64 | LinuxArm64 | MingwX64 | MacosArm64       |
 |-------------|----------|------------|----------|------------------|
 | LinuxX64    | ✅       | ✅         | ✅       | ❌[^macos-cross] |
+| MingwX64    | ❓       | ❓         | ❓       | ❌[^macos-cross] |
 | MacosArm64  | ✅       | ✅         | ✅       | ✅               |
 | MacosX64    | ✅       | ✅         | ✅       | ✅               |
-| MingwX64    | ❓       | ❓         | ❓       | ❌[^macos-cross] |
 
 [^macos-cross]: Kotlin/Native の公式サポートでは、Linux / WindowsホストからAppleターゲットの最終バイナリをビルドできない。
 非公式な`osxcross`環境で動く可能性はあるが、本プロジェクトでは未対応。
