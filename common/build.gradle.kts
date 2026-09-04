@@ -118,9 +118,8 @@ tasks.named<ProcessResources>("jvmProcessResources") {
     }
 
     val macosTargets = listOf(JniBuildTarget.MacosArm64, JniBuildTarget.MacosX64)
-    val skipMacosUniversal2 = providers.gradleProperty("skipMacosUniversal2").isPresent
     val macosLibrary = when {
-        !skipMacosUniversal2 && macosTargets.any { it in availableTargets } -> {
+        macosTargets.all { it in availableTargets } -> {
             dependsOn(":commonJni:buildCommonJniMacosUniversal2")
             rootProject.file("commonJni/build/native/macosUniversal2/libkona_common_jni.dylib")
         }

@@ -19,7 +19,7 @@
 | Host\Target | LinuxX64 | LinuxArm64 | MingwX64 | MacosArm64       |
 |-------------|----------|------------|----------|------------------|
 | LinuxX64    | ✅       | ✅         | ✅       | ❌[^macos-cross] |
-| MingwX64    | ❓       | ❓         | ❓       | ❌[^macos-cross] |
+| MingwX64    | ✅       | ✅         | ✅       | ❌[^macos-cross] |
 | MacosArm64  | ✅       | ✅         | ✅       | ✅               |
 | MacosX64    | ✅       | ✅         | ✅       | ✅               |
 

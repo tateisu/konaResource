@@ -15,8 +15,10 @@ enum class KonaBuildTarget(
     LinuxArm64("linuxArm64", "linux_arm64"),
     MingwX64("mingwX64", "mingw_x64"),
     MacosArm64("macosArm64", "macos_arm64"),
+    MacosX64("macosX64", "macos_x64"),
 
     // Note:MacOS X64 は Kotlin Native 2.3.20以降でdeprecated
+
     ;
 
     internal fun isAvailable(project: Project, kotlinVersion: String): Boolean =
@@ -52,6 +54,7 @@ fun KotlinMultiplatformExtension.konaTargets() {
             KonaBuildTarget.LinuxArm64 -> linuxArm64()
             KonaBuildTarget.MingwX64 -> mingwX64()
             KonaBuildTarget.MacosArm64 -> macosArm64()
+            KonaBuildTarget.MacosX64 -> macosX64()
         }
     }
 }

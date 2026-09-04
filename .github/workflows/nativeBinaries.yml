@@ -33,12 +33,12 @@ jobs:
         run: ./gradlew --no-daemon --max-workers=1 :common:downloadKotlinNativeDistribution -PbootstrapKotlinNative
 
       - name: publishLocalMaven
-        run: ./gradlew --no-daemon --max-workers=1 publishLocalMaven -PskipMacosUniversal2
+        run: ./gradlew --no-daemon --max-workers=1 publishLocalMaven
 
       - name: Build all
         id: build
         continue-on-error: true
-        run: ./gradlew --no-daemon --max-workers=1 build --continue -x :sample1:build -PskipMacosUniversal2
+        run: ./gradlew --no-daemon --max-workers=1 build --continue -x :sample1:build
 
       - name: Collect build results
         if: always()

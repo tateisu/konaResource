@@ -3,6 +3,7 @@
 - The `common-all` workflow now preserves each host's common artifact without merging its publications.
 - Maven Central publication now merges common native publications into `workflowResult-merged` without modifying host-specific workflow results.
 - Native binary matrix workflows now collect every file below each module's `build/bin` directory.
+- Native binary matrix builds now select macOS Universal2 or host-specific JNI automatically based on the availability of both macOS JNI targets.
 - macOS Universal2 JNI builds are now attempted whenever either macOS JNI target is available, so an unavailable architecture fails the Universal2 build instead of silently falling back to a single-architecture library.
 - `verifyCommonJni.pl` now verifies that the macOS JNI library contains both x86_64 and arm64 slices.
 - The `konaResource` plugin can skip resource embedding for selected Kotlin/Native targets with `skipEmbedIf`.

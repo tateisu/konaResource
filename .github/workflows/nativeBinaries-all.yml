@@ -13,6 +13,12 @@ jobs:
       host: LinuxX64
       runner: ubuntu-24.04
 
+  windows-x64:
+    uses: ./.github/workflows/nativeBinaries.yml
+    with:
+      host: MingwX64
+      runner: windows-2025
+
   macos-arm64:
     uses: ./.github/workflows/nativeBinaries.yml
     with:
@@ -24,9 +30,3 @@ jobs:
     with:
       host: MacosX64
       runner: macos-15-intel
-
-  windows-x64:
-    uses: ./.github/workflows/nativeBinaries.yml
-    with:
-      host: MingwX64
-      runner: windows-2025

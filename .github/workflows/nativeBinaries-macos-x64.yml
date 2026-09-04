@@ -1,0 +1,14 @@
+name: build matrix - macOS arm64
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: ./.github/workflows/nativeBinaries.yml
+    with:
+      host: MacosX64
+      runner: macos-15-intel
