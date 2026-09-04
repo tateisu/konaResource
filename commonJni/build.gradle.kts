@@ -195,8 +195,11 @@ availableJniBuildTargets.forEach{ it.registerJniBuild() }
 
 // MacosX64 または MacosArm64 をビルドできるなら Universal2 もビルドする。
 // Universal2 は両アーキテクチャを入力にするため、片方が使えなければ task が失敗する。
-if (JniBuildTarget.MacosX64 in availableJniBuildTargets ||
+val skipMacosUniversal2 = providers.gradleProperty("skipMacosUniversal2").isPresent
+if (!skipMacosUniversal2 &&
+    (JniBuildTarget.MacosX64 in availableJniBuildTargets ||
     JniBuildTarget.MacosArm64 in availableJniBuildTargets
+    )
 ) {
     // registerMacosUniversal2Build
     val macosUniversal = nativeBuildDirectory.map { it.dir("macosUniversal2").file("libkona_common_jni.dylib") }
