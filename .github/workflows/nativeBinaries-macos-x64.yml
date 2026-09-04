@@ -1,4 +1,4 @@
-name: build matrix - macOS arm64
+name: build matrix - macOS x64
 
 on:
   workflow_dispatch:
