@@ -60,9 +60,8 @@ GetOptions(
     "branch=s"       => \$branch,
     "h|help"         => \$help,
 ) or do {
-    print STDERR "bad options.\n";
     usage();
-    exit 2;
+    die "\nError:\n\tbad options.\n\n";
 };
 
 if ($help) {
@@ -131,8 +130,14 @@ sub check_branch_synchronized ($branch) {
 
 my $runId;
 if($runWorkflow){
-    say "# start workflow $workflowYml";
+    say "# check branch synchronized …";
     check_branch_synchronized($branch);
+
+    say "# local test before invode workflow …";
+    command(qw(./gradlew clean build check));
+
+    say "# start workflow $workflowYml";
+
     my $workflow_started_at = time;
     my $workflow_error;
     eval {
