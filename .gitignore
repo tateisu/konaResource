@@ -10,5 +10,7 @@ jdk/*
 localMaven/
 workflowResult/
 workflowResult-merged/
+nativeBinaries/
 
+# 無視の打ち消し
 !/jdk/.place-holder
