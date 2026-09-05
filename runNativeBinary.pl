@@ -28,7 +28,7 @@ my $skipDownload = 0;
 
 # it true, run workflow and wait successed.
 my $runWorkflow = 0;
-my $help = 0;
+my $help        = 0;
 
 sub usage () {
     print <<'USAGE';
@@ -52,17 +52,18 @@ USAGE
 }
 
 GetOptions(
-    "myArch=s"       => \$myArch,
-    "downloadDir=s"  => \$downloadDir,
-    "skipDownload"   => \$skipDownload,
-    "runWorkflow"    => \$runWorkflow,
+    "myArch=s"      => \$myArch,
+    "downloadDir=s" => \$downloadDir,
+    "skipDownload"  => \$skipDownload,
+    "runWorkflow"   => \$runWorkflow,
     "workflowYml=s" => \$workflowYml,
-    "branch=s"       => \$branch,
-    "h|help"         => \$help,
-) or do {
+    "branch=s"      => \$branch,
+    "h|help"        => \$help,
+  )
+  or do {
     usage();
     die "\nError:\n\tbad options.\n\n";
-};
+  };
 
 if ($help) {
     usage();
@@ -78,19 +79,31 @@ sub trim ($a) {
     $a;
 }
 
+sub formatDuration ($seconds) {
+    my $milliseconds = int($seconds * 1000 + 0.5);
+    my $hours        = int($milliseconds / 3_600_000);
+    $milliseconds %= 3_600_000;
+    my $minutes = int($milliseconds / 60_000);
+    $milliseconds %= 60_000;
+    my $formatted = "";
+    $formatted .= "${hours}h"   if length($formatted) || $hours;
+    $formatted .= "${minutes}m" if length($formatted) || $minutes;
+    $formatted .= sprintf '%.3fs', $milliseconds / 1000;
+    return $formatted;
+}
+
 sub command_status ($status, $command) {
     if ($status == -1) {
         die "failed to execute $command: $!\n";
     } elsif ($status & 127) {
-        die sprintf "%s died with signal=%d, %s coreDump\n",
-            $command, ($status & 127), ($status & 128) ? 'w/' : 'w/o';
+        die sprintf "%s died with signal=%d, %s coreDump\n", $command, ($status & 127), ($status & 128) ? 'w/' : 'w/o';
     }
     return $status >> 8;
 }
 
 sub command (@args) {
     say "+", join(" ", map { "'$_'" } @args);
-    my $status = system @args;
+    my $status    = system @args;
     my $exit_code = command_status($status, $args[0]);
     die "$args[0] failed with exitCode=$exit_code\n" if $exit_code != 0;
 }
@@ -110,26 +123,26 @@ sub check_branch_synchronized ($branch) {
     say "# check local and remote branch synchronization: $branch";
     command('git', 'fetch', 'origin', $branch);
 
-    my $local_head = trim capture_command('git', 'rev-parse', '--verify', "$branch^{commit}");
+    my $local_head  = trim capture_command('git', 'rev-parse', '--verify', "$branch^{commit}");
     my $remote_head = trim capture_command('git', 'rev-parse', '--verify', "origin/$branch^{commit}");
     if ($local_head ne $remote_head) {
         die "local branch '$branch' and remote branch 'origin/$branch' are not synchronized\n"
-            . "  local:  $local_head\n"
-            . "  remote: $remote_head\n";
+          . "  local:  $local_head\n"
+          . "  remote: $remote_head\n";
     }
 
     my $current_branch = trim capture_command('git', 'branch', '--show-current');
     if ($current_branch eq $branch) {
         my $status = capture_command('git', 'status', '--porcelain');
         die "working tree for branch '$branch' has uncommitted changes:\n$status"
-            if length $status;
+          if length $status;
     }
 }
 
 ###############################################
 
 my $runId;
-if($runWorkflow){
+if ($runWorkflow) {
     say "# check branch synchronized …";
     check_branch_synchronized($branch);
 
@@ -149,18 +162,14 @@ if($runWorkflow){
         command('gh', 'run', 'watch', $runId, '--exit-status');
         1;
     } or $workflow_error = $@ || "workflow failed\n";
-    say sprintf "# workflow elapsed: %.3f seconds", time - $workflow_started_at;
+    say "# workflow elapsed: " . formatDuration(time - $workflow_started_at);
     die $workflow_error if $workflow_error;
-}else{
+} else {
     say "# find latest success run of workflow $workflowYml";
     my $output = capture_command(
-        'gh', 'run', 'list',
-        '--workflow', $workflowYml,
-        '--branch', $branch,
-        '--status', 'success',
-        '--limit', '1',
-        '--json', 'databaseId',
-        '--jq', '.[0].databaseId',
+        'gh',         'run',      'list',    '--workflow', $workflowYml, '--branch',
+        $branch,      '--status', 'success', '--limit',    '1',          '--json',
+        'databaseId', '--jq',     '.[0].databaseId',
     );
     $runId = trim $output;
 }
@@ -173,10 +182,10 @@ if ($skipDownload && -d $downloadDir) {
     say "# download workflow result …";
     $runId or die "missing runId.\n";
     remove_tree($downloadDir);
-    command('gh', 'run', 'download', $runId, '-n', 'nativeBinaries-LinuxX64', '--dir', "$downloadDir/LinuxX64");
-    command('gh', 'run', 'download', $runId, '-n', 'nativeBinaries-MingwX64', '--dir', "$downloadDir/MingwX64");
+    command('gh', 'run', 'download', $runId, '-n', 'nativeBinaries-LinuxX64',   '--dir', "$downloadDir/LinuxX64");
+    command('gh', 'run', 'download', $runId, '-n', 'nativeBinaries-MingwX64',   '--dir', "$downloadDir/MingwX64");
     command('gh', 'run', 'download', $runId, '-n', 'nativeBinaries-MacosArm64', '--dir', "$downloadDir/MacosArm64");
-    command('gh', 'run', 'download', $runId, '-n', 'nativeBinaries-MacosX64', '--dir', "$downloadDir/MacosX64");
+    command('gh', 'run', 'download', $runId, '-n', 'nativeBinaries-MacosX64',   '--dir', "$downloadDir/MacosX64");
 }
 
 ###############################################
@@ -226,9 +235,9 @@ find(
             return if not -f;
             return if m|[\\/]\.dSYM[\\/]Contents[\\/]|;
             my $relative = File::Spec->abs2rel($File::Find::name, $downloadRoot);
-            my @parts = File::Spec->splitdir($relative);
+            my @parts    = File::Spec->splitdir($relative);
             @parts >= 4 or die "unknown file: $File::Find::name\n";
-            my ($buildArch, $module, $targetArch) = @parts[3, 1, 2];
+            my ($buildArch, $module, $targetArch) = @parts[ 3, 1, 2 ];
             push @files, [ $targetArch, $module, $buildArch, $_ ];
         },
     },
