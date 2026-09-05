@@ -227,7 +227,7 @@ kotlin {
                                     writeText(
                                             "headers = sha256_intrinsics.h\n" +
                                             "staticLibraries = libkona_common_native.a\n" +
-                                            "libraryPaths = ${nativeLibraryDirectory.get().asFile.absolutePath}\n" +
+                                            "libraryPaths = ${nativeLibraryDirectory.get().asFile.absolutePath.replace('\\', '/')}\n" +
                                             "package = jp.juggler.konaResource.sha256intrinsics\n",
                                     )
                                 }
@@ -236,7 +236,7 @@ kotlin {
                                     writeText(
                                         "headers = blake3_kona.h\n" +
                                             "staticLibraries = libkona_common_native.a\n" +
-                                            "libraryPaths = ${nativeLibraryDirectory.get().asFile.absolutePath}\n" +
+                                            "libraryPaths = ${nativeLibraryDirectory.get().asFile.absolutePath.replace('\\', '/')}\n" +
                                             "package = jp.juggler.konaResource.blake3\n",
                                     )
                                 }
