@@ -152,7 +152,11 @@ kotlin {
                                 ) + if (nativeTargetName.endsWith("X64")) {
                                     listOf("-msse4.1", "-msha")
                                 } else {
-                                    listOf("-march=armv8-a+crc+crypto")
+                                    listOf(
+                                        "-Xclang", "-target-feature", "-Xclang", "+crc",
+                                        "-Xclang", "-target-feature", "-Xclang", "+crypto",
+                                        "-Xclang", "-target-feature", "-Xclang", "+sha2",
+                                    )
                                 } + listOf(
                                     "-o", shaObject.get().asFile.absolutePath,
                                 ),
