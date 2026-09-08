@@ -4,6 +4,7 @@ import jp.juggler.konaResource.buildlogic.availableKonaBuildTarget
 import jp.juggler.konaResource.buildlogic.getKonaBuildHost
 import jp.juggler.konaResource.buildlogic.konaTargets
 import org.gradle.api.tasks.JavaExec
+import org.gradle.api.tasks.Exec
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinNativeLink
@@ -62,6 +63,13 @@ gradle.projectsEvaluated {
 }
 
 if (!skipNativeTargets) {
+    tasks.named<Exec>("runReleaseExecutable$hostArch") {
+        providers.gradleProperty("args").orNull
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?.let { arguments -> args(arguments.split(Regex("\\s+"))) }
+    }
+
     tasks.register("runRelease") {
         group = "run"
         description = "Runs the release benchmark for the host architecture."

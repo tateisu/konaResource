@@ -14,6 +14,7 @@ private class BenchmarkOptions(
     var warmupDuration: Duration = 0.5.minutes,
     var measurementIterations: Int = 3,
     var measurementDuration: Duration = 0.5.minutes,
+    var nameFilter: String? = null,
 )
 
 private val benchmarkSpec = buildCommandSpec(
@@ -42,6 +43,11 @@ private val benchmarkSpec = buildCommandSpec(
         fullName = "md",
         valueName = "duration",
     ) { measurementDuration = it.parseDuration("measurementDuration") }
+    stringOption(
+        desc = "Run benchmarks whose names contain this string.",
+        fullName = "name",
+        valueName = "name",
+    ) { nameFilter = it }
 }
 
 private fun benchmarkOptionsConfig(args: Array<out String>) = ArgParserConfig(
@@ -67,7 +73,13 @@ fun main(args: Array<String>) {
     }
 
     val options = result.top as BenchmarkOptions
-    benchmarkItems().forEach { benchmark ->
+    val benchmarks = benchmarkItems().filter { benchmark ->
+        options.nameFilter == null || benchmark.name.contains(options.nameFilter!!)
+    }
+    require(benchmarks.isNotEmpty()) {
+        "No benchmark matched --name=${options.nameFilter}"
+    }
+    benchmarks.forEach { benchmark ->
         benchmark.setup()
         runBenchmark(
             name = benchmark.name,

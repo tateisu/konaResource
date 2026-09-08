@@ -43,8 +43,8 @@ internal class KonaLz4FrameBenchmark(
             inputSize = source.size,
             options = Lz4Options(
                 blockLinked = false,
-                contentChecksumFlag = false,
-                blockChecksumFlag = false,
+                contentChecksumFlag = true,
+                blockChecksumFlag = true,
             ),
             input = { buffer ->
                 if (buffer.size >= source.size) {
