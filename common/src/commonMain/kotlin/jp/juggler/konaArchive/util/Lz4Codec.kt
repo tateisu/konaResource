@@ -66,6 +66,7 @@ abstract class Lz4Codec {
      * @param output codecが出力フレームを用意したら呼ばれる。Bufferから読んでもよい。読まないとBufferがどんどん長くなる
      * @return outputに渡されるのと同じBuffer。outputで適切に読み出していれば中身はカラになるだろう
      */
+    @Suppress("LoopWithTooManyJumpStatements")
     fun compressBuffer(
         inputSize: Int,
         options: Lz4Options = Lz4Options(),

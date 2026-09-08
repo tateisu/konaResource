@@ -46,7 +46,6 @@ internal class KonaLz4CompressBenchmark(
         )
         return nRead
     }
-
 }
 
 internal class KonaLz4DecompressBenchmark(
