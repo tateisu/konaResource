@@ -16,8 +16,6 @@ import jp.juggler.konaResource.lz4.cinterop.LZ4F_isError
 import jp.juggler.konaResource.lz4.cinterop.LZ4F_preferences_t
 import jp.juggler.konaResource.lz4.cinterop.kona_lz4_init_preferences
 import jp.juggler.konaResource.system.cinterop.kona_memmove
-import kotlinx.atomicfu.AtomicInt
-import kotlinx.atomicfu.atomic
 import kotlinx.atomicfu.locks.reentrantLock
 import kotlinx.atomicfu.locks.withLock
 import kotlinx.cinterop.CPointer
@@ -45,17 +43,6 @@ internal object Lz4CodecNative : Lz4Codec() {
     private val poolDecompLock = reentrantLock()
     private val poolDecompSrc = ArrayList<ByteArray>()
     private val poolDecompDst = ArrayList<ByteArray>()
-
-    private class DecodeCallbackContext(
-        val srcArray: ByteArray,
-        val dstArray: ByteArray,
-        val userInput: (ByteArray, offset: Int, maxLength: Int) -> Int,
-        val userOutput: (ByteArray, offset: Int, length: Int) -> Unit,
-    )
-    private val decodeCallbackContextMap = mutableMapOf<Int,DecodeCallbackContext>()
-    private val decodeCallbackContextIdSeed = atomic(0)
-
-
 
     @Suppress("LongMethod", "CyclomaticComplexMethod")
     override fun compress(
@@ -191,146 +178,136 @@ internal object Lz4CodecNative : Lz4Codec() {
         output: (ByteArray, offset: Int, length: Int) -> Unit,
     ): Int {
         require(expectedSize >= 0) { "expectedSize must not be negative" }
-        val(callbackContext,callbackContextId)  = poolDecompLock.withLock {
-            val context = DecodeCallbackContext(
-                srcArray =  poolDecompSrc.removeLastOrNull() ?: ByteArray(MAX_CHUNK_SIZE + 1024),
-                dstArray =  poolDecompDst.removeLastOrNull() ?: ByteArray(MAX_CHUNK_SIZE * 2),
-                userInput = input,
-                userOutput = output,
+        var (srcArray, dstArray) = poolDecompLock.withLock {
+            Pair(
+                poolDecompSrc.removeLastOrNull() ?: ByteArray(MAX_CHUNK_SIZE + 1024),
+                poolDecompDst.removeLastOrNull() ?: ByteArray(MAX_CHUNK_SIZE * 2),
             )
-            val id = decodeCallbackContextIdSeed.incrementAndGet()
-            decodeCallbackContextMap[id]=context
-            context to id
         }
         return try {
-            callbackContext.dstArray.usePinned { dstPinned ->
-                callbackContext.srcArray.usePinned { srcPinned ->
-                    callbackContext.usePinned { callbackContextPinned ->
-                        // TODO: この内部をまるごとCコードに変更する
-                        // Cコードからのコールバックは callbackContextPinned または callbackContextId を含むようにする
-                        memScoped {
-                            val srcArray = callbackContext.srcArray
-                            val dstArray = callbackContext.dstArray
-                            var result: ULong
-                            val context = alloc<LZ4F_decompressionContext_tVar>()
-                            result = LZ4F_createDecompressionContext(
-                                context.ptr,
-                                LZ4F_VERSION,
-                            )
-                            require(LZ4F_isError(result) == 0u) {
-                                "LZ4F_createDecompressionContext failed. ${LZ4F_getErrorName(result)?.toKString()}"
-                            }
-                            try {
-                                val sourceSize = allocArray<ULongVar>(1)
-                                val destinationSize = allocArray<ULongVar>(1)
-                                // input() が <=0 を返したら変化する
-                                var inputFinished = false
-                                // srcArrayの使用中バイト数
-                                var srcUsed = 0
-                                // 無限ループ対策
-                                var emptyCount = 0
-                                // デコード済みバイト数
-                                var outLength = 0
-                                // memmove したバイト数の合計
-                                var memMoveTotal = 0
-                                loop@ while (true) {
-                                    while (!inputFinished && srcUsed < srcArray.size) {
-                                        // srcArray+srcUsedの位置に追加で読む
-                                        val nRead = input(
-                                            srcArray,
-                                            srcUsed,
-                                            srcArray.size - srcUsed,
-                                        )
-                                        if (nRead <= 0) {
-                                            inputFinished = true
-                                            break
-                                        }
-                                        srcUsed += nRead
+            dstArray.usePinned { dstPinned ->
+                srcArray.usePinned { srcPinned ->
+                    memScoped {
+                        var result: ULong
+                        val context = alloc<LZ4F_decompressionContext_tVar>()
+                        result = LZ4F_createDecompressionContext(
+                            context.ptr,
+                            LZ4F_VERSION,
+                        )
+                        require(LZ4F_isError(result) == 0u) {
+                            "LZ4F_createDecompressionContext failed. ${LZ4F_getErrorName(result)?.toKString()}"
+                        }
+                        try {
+                            val sourceSize = allocArray<ULongVar>(1)
+                            val destinationSize = allocArray<ULongVar>(1)
+                            // input() が <=0 を返したら変化する
+                            var inputFinished = false
+                            // srcArrayの使用中バイト数
+                            var srcUsed = 0
+                            // 無限ループ対策
+                            var emptyCount = 0
+                            // デコード済みバイト数
+                            var outLength = 0
+                            // memmove したバイト数の合計
+                            var memMoveTotal = 0
+                            loop@ while (true) {
+                                while (!inputFinished && srcUsed < srcArray.size) {
+                                    // srcArray+srcUsedの位置に追加で読む
+                                    val nRead = input(
+                                        srcArray,
+                                        srcUsed,
+                                        srcArray.size - srcUsed,
+                                    )
+                                    if (nRead <= 0) {
+                                        inputFinished = true
+                                        break
                                     }
-                                    // 入力が足りない
-                                    if (srcUsed <= 0) {
-                                        error("unexpected end: remaining=${expectedSize - outLength}")
+                                    srcUsed += nRead
+                                }
+                                // 入力が足りない
+                                if (srcUsed <= 0) {
+                                    error("unexpected end: remaining=${expectedSize - outLength}")
+                                }
+                                var srcOffset = 0
+                                do {
+                                    sourceSize.pointed.value = (srcUsed - srcOffset).toULong()
+                                    destinationSize.pointed.value = dstArray.size.toULong()
+                                    // Note: LZ4F_decompress は出力バッファが1ブロック(設定によるが最大4MB)
+                                    // 以上ないと内部でのコピー動作が1回増える
+                                    result = LZ4F_decompress(
+                                        context.value,
+                                        dstPinned.addressOf(0),
+                                        destinationSize,
+                                        srcPinned.addressOf(srcOffset),
+                                        sourceSize,
+                                        null,
+                                    )
+                                    require(LZ4F_isError(result) == 0u) {
+                                        "LZ4F_decompress failed. ${LZ4F_getErrorName(result)?.toKString()}"
                                     }
-                                    var srcOffset = 0
-                                    do {
-                                        sourceSize.pointed.value = (srcUsed - srcOffset).toULong()
-                                        destinationSize.pointed.value = dstArray.size.toULong()
-                                        result = LZ4F_decompress(
-                                            context.value,
-                                            dstPinned.addressOf(0),
-                                            destinationSize,
-                                            srcPinned.addressOf(srcOffset),
-                                            sourceSize,
-                                            null,
-                                        )
-                                        require(LZ4F_isError(result) == 0u) {
-                                            "LZ4F_decompress failed. ${LZ4F_getErrorName(result)?.toKString()}"
+                                    // 入力を消費したバイト数
+                                    val srcConsumed = sourceSize.pointed.value.toInt()
+                                    // デコードしたバイト数
+                                    val decoded = destinationSize.pointed.value.toInt()
+                                    // デコード分があれば outputBuffer に追記して outputラムダでユーザに通知
+                                    if (decoded > 0) {
+                                        require(outLength + decoded <= expectedSize) {
+                                            "LZ4 output exceeds expected size"
                                         }
-                                        // 入力を消費したバイト数
-                                        val srcConsumed = sourceSize.pointed.value.toInt()
-                                        // デコードしたバイト数
-                                        val decoded = destinationSize.pointed.value.toInt()
-                                        // デコード分があれば outputBuffer に追記して outputラムダでユーザに通知
-                                        if (decoded > 0) {
-                                            require(outLength + decoded <= expectedSize) {
-                                                "LZ4 output exceeds expected size"
+                                        output(dstArray, 0, decoded)
+                                        outLength += decoded
+                                    }
+                                    srcOffset += srcConsumed
+                                    when {
+                                        // result == 0なら 現在の LZ4 frame の展開完了
+                                        // 終端マーカーなど読み終わった
+                                        result == 0uL -> {
+                                            require(outLength == expectedSize) {
+                                                "LZ4 size mismatch"
                                             }
-                                            output(dstArray, 0, decoded)
-                                            outLength += decoded
+                                            require(srcOffset == srcUsed) {
+                                                "Trailing bytes after LZ4 frame"
+                                            }
+                                            break@loop
                                         }
-                                        srcOffset += srcConsumed
-                                        when {
-                                            // result == 0なら 現在の LZ4 frame の展開完了
-                                            // 終端マーカーなど読み終わった
-                                            result == 0uL -> {
-                                                require(outLength == expectedSize) {
-                                                    "LZ4 size mismatch"
-                                                }
-                                                require(srcOffset == srcUsed) {
-                                                    "Trailing bytes after LZ4 frame"
-                                                }
-                                                break@loop
-                                            }
-                                            // 無限ループ対策
-                                            srcConsumed > 0 || decoded > 0 -> emptyCount = 0
-                                            srcConsumed == 0 && decoded == 0 && ++emptyCount >= 3 ->
-                                                error("LZ4 decompressor made no progress")
-                                        }
-                                        // result>0は次回要求バイト数のヒント
-                                        // srcArrayにあるデータの残りがそれ以上あるならバッファ管理なしでで再度decodeする
-                                    } while ((srcUsed - srcOffset).toULong() >= result)
-                                    // 次回入力のためにバッファを詰める
-                                    if (srcOffset > 0) {
-                                        val srcRemain = srcUsed - srcOffset
-                                        srcUsed = when {
-                                            srcRemain < 0 -> error("LZ4 decompressor consumed too much input")
-                                            srcRemain == 0 -> 0
-                                            else -> {
-                                                memMoveTotal += srcRemain
-                                                kona_memmove(
-                                                    srcPinned.addressOf(0),
-                                                    srcPinned.addressOf(srcOffset),
-                                                    srcRemain.toULong(),
-                                                )
-                                                srcRemain
-                                            }
+                                        // 無限ループ対策
+                                        srcConsumed > 0 || decoded > 0 -> emptyCount = 0
+                                        srcConsumed == 0 && decoded == 0 && ++emptyCount >= 3 ->
+                                            error("LZ4 decompressor made no progress")
+                                    }
+                                    // result>0は次回要求バイト数のヒント
+                                    // srcArrayにあるデータの残りがそれ以上あるならバッファ管理なしでで再度decodeする
+                                } while ((srcUsed - srcOffset).toULong() >= result)
+                                // 次回入力のためにバッファを詰める
+                                if (srcOffset > 0) {
+                                    val srcRemain = srcUsed - srcOffset
+                                    srcUsed = when {
+                                        srcRemain < 0 -> error("LZ4 decompressor consumed too much input")
+                                        srcRemain == 0 -> 0
+                                        else -> {
+                                            memMoveTotal += srcRemain
+                                            kona_memmove(
+                                                srcPinned.addressOf(0),
+                                                srcPinned.addressOf(srcOffset),
+                                                srcRemain.toULong(),
+                                            )
+                                            srcRemain
                                         }
                                     }
                                 }
-                                // println("memMoveTotal=$memMoveTotal")
-                                outLength
-                            } finally {
-                                LZ4F_freeDecompressionContext(context.value)
                             }
+                            // println("memMoveTotal=$memMoveTotal")
+                            outLength
+                        } finally {
+                            LZ4F_freeDecompressionContext(context.value)
                         }
                     }
                 }
             }
         } finally {
             poolDecompLock.withLock {
-                poolDecompSrc.add(callbackContext.srcArray)
-                poolDecompDst.add(callbackContext.dstArray)
-                decodeCallbackContextMap.remove(callbackContextId)
+                poolDecompSrc.add(srcArray)
+                poolDecompDst.add(dstArray)
             }
         }
     }

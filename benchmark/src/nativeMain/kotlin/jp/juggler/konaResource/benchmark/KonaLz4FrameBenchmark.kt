@@ -1,6 +1,7 @@
 package jp.juggler.konaResource.benchmark
 
 import jp.juggler.konaArchive.readKonaFiles
+import jp.juggler.konaArchive.util.Lz4Codec
 import jp.juggler.konaArchive.util.Lz4Options
 import jp.juggler.konaArchive.util.defaultLz4Codec
 import jp.juggler.konaResource.lz4.cinterop.LZ4F_createDecompressionContext
@@ -55,16 +56,24 @@ internal class KonaLz4FrameBenchmark(
                 }
             },
         ).readByteArray()
-        destination = ByteArray(source.size)
+        // LZ4F_decompress は出力バッファが1ブロック(設定によるが最大4MB)
+        // 以上ないと内部でのコピー動作が1回増える
+        destination = ByteArray(Lz4Codec.MAX_CHUNK_SIZE * 2)
     }
 
-    override fun bytes(): Long = source.size.toLong()
+    override fun bytes(): Long = compressed.size.toLong()
+
     override fun run(): Int = memScoped {
         val context = alloc<LZ4F_decompressionContext_tVar>()
         check(LZ4F_createDecompressionContext(context.ptr, 100u) == 0uL)
         try {
             val sourceSize = allocArray<ULongVar>(1)
             val destinationSize = allocArray<ULongVar>(1)
+
+            // this参照をローカル変数に固定する
+            val compressed = compressed
+            val destination = destination
+
             var sourceOffset = 0
             var destinationOffset = 0
             compressed.usePinned { sourcePinned ->
@@ -92,7 +101,7 @@ internal class KonaLz4FrameBenchmark(
             }
             check(destinationOffset == source.size)
             (destination.firstOrNull()?.toInt() ?: 0) +
-                (destination.lastOrNull()?.toInt() ?: 0)
+                (destination.getOrNull(destinationOffset - 1)?.toInt() ?: 0)
         } finally {
             LZ4F_freeDecompressionContext(context.value)
         }
