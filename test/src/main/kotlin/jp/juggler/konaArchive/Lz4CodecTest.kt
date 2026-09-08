@@ -20,27 +20,28 @@ class Lz4CodecTest : FreeSpec() {
                 favorDecSpeed = true,
             )
 
-            val frame = defaultLz4Codec.compress(
-                inputSize = input.size,
+            val frame = defaultLz4Codec.compressByteArray(
                 options = options,
-                input = { buffer ->
-                    buffer.write(input)
-                    input.size
-                },
+                src = input,
             )
 
             val frameBytes = frame.readByteArray()
             var frameOffset = 0
-            val restored = defaultLz4Codec.decompress(
+            val restored = defaultLz4Codec.decompressBuffer(
                 expectedSize = input.size,
                 input = { buffer ->
-                    if (frameOffset == frameBytes.size) {
-                        -1
-                    } else {
-                        val size = frameBytes.size - frameOffset
-                        buffer.write(frameBytes, frameOffset, size)
-                        frameOffset += size
-                        size
+                    val remain = frameBytes.size - frameOffset
+                    when {
+                        remain <= 0 -> -1
+                        else -> {
+                            buffer.write(
+                                source = frameBytes,
+                                offset = frameOffset,
+                                byteCount = remain,
+                            )
+                            frameOffset += remain
+                            remain
+                        }
                     }
                 },
             )
@@ -50,7 +51,7 @@ class Lz4CodecTest : FreeSpec() {
         "compressAcceptsEndOfInputSignal" {
             val input = ByteArray(128 * 1024) { index -> (index * 17).toByte() }
             var supplied = false
-            val frame = defaultLz4Codec.compress(
+            val frame = defaultLz4Codec.compressBuffer(
                 inputSize = input.size + 1,
                 options = Lz4Options(contentSizeFlag = false),
                 input = { buffer ->
@@ -65,7 +66,7 @@ class Lz4CodecTest : FreeSpec() {
             )
             val frameBytes = frame.readByteArray()
             var frameOffset = 0
-            val restored = defaultLz4Codec.decompress(
+            val restored = defaultLz4Codec.decompressBuffer(
                 expectedSize = input.size,
                 input = { buffer ->
                     if (frameOffset == frameBytes.size) {
@@ -89,7 +90,7 @@ class Lz4CodecTest : FreeSpec() {
             var inputCalls = 0
             var compressOutputCalls = 0
             val compressedOutput = okio.Buffer()
-            val compressed = defaultLz4Codec.compress(
+            val compressed = defaultLz4Codec.compressBuffer(
                 inputSize = input.size,
                 input = { buffer ->
                     inputCalls++
@@ -113,7 +114,7 @@ class Lz4CodecTest : FreeSpec() {
             val compressedBytes = compressedOutput.readByteArray()
             var compressedOffset = 0
             var outputCalls = 0
-            val restored = defaultLz4Codec.decompress(
+            val restored = defaultLz4Codec.decompressBuffer(
                 expectedSize = input.size,
                 input = { buffer ->
                     val size = minOf(11 * 1024, compressedBytes.size - compressedOffset)
@@ -134,26 +135,23 @@ class Lz4CodecTest : FreeSpec() {
         }
         "LZ4 compresses and decompresses data" {
             val input = ByteArray(128 * 1024) { index -> (index * 31).toByte() }
-            val compressed = defaultLz4Codec.compress(
-                inputSize = input.size,
-                input = { buffer ->
-                    buffer.write(input)
-                    input.size
-                },
+            val compressed = defaultLz4Codec.compressByteArray(
+                src = input,
             )
 
             val compressedBytes = compressed.readByteArray()
             var offset = 0
-            val restored = defaultLz4Codec.decompress(
+            val restored = defaultLz4Codec.decompressBuffer(
                 expectedSize = input.size,
                 input = { buffer ->
-                    if (offset == compressedBytes.size) {
-                        -1
-                    } else {
-                        val size = compressedBytes.size - offset
-                        buffer.write(compressedBytes, offset, size)
-                        offset += size
-                        size
+                    val step = compressedBytes.size - offset
+                    when {
+                        step <= 0L -> -1
+                        else -> {
+                            buffer.write(compressedBytes, offset, step)
+                            offset += step
+                            step
+                        }
                     }
                 },
             )

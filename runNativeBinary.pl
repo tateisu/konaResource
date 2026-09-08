@@ -223,6 +223,42 @@ $myArch =~ /\A(?:linuxX64|linuxArm64|mingwX64|macosArm64|macosX64)\z/
 
 ###############################################
 
+sub listDependencies ($row) {
+    my ($targetArch, $module, $buildArch, $filePath) = @$row;
+
+    my @dependencies;
+    if ($^O eq 'linux') {
+        my $output = capture_command('ldd', $filePath);
+        for (split /\R/, $output) {
+            if (/^\s*(\S+)\s+=>\s+(\S+)/) {
+                push @dependencies, "$1 => $2";
+            } elsif (/^\s*(\S+)\s+\(/) {
+                push @dependencies, $1;
+            }
+        }
+    } elsif ($^O eq 'darwin') {
+        my $output = capture_command('otool', '-L', $filePath);
+        my @lines = split /\R/, $output;
+        shift @lines;    # otool prints the inspected file on the first line.
+        @dependencies = map { trim } grep { /\S/ } @lines;
+    } elsif ($^O eq 'MSWin32') {
+        my $output = capture_command('objdump', '-p', $filePath);
+        my @lines = split /\R/, $output;
+        @dependencies = map { s/^\s*DLL Name:\s*//r } grep { /^\s*DLL Name:/ } @lines;
+    } else {
+        die "unsupported operating system for dependency listing: $^O\n";
+    }
+
+    say "# dependencies";
+    if (@dependencies) {
+        say "  $_" for @dependencies;
+    } else {
+        say "  (none)";
+    }
+}
+
+###############################################
+
 say "# listing workflow result …";
 
 # list of [targetArch,module,buildArch,filePath]
@@ -250,17 +286,21 @@ for (sort { $a->[0] cmp $b->[0] or $a->[1] cmp $b->[1] or $a->[2] cmp $b->[2] or
     my ($targetArch, $module, $buildArch, $filePath) = @$_;
     if ($targetArch ne $myArch) {
         $skipped{$targetArch} = 1;
+        next;
+    }
+    say "\n# binary ", join(",", @$_);
+
+    listDependencies($_);
+
+    say "\n# run $filePath";
+
+    # mingwでビルドした linuxX64 バイナリはパーミッションが設定されていない
+    chmod(0755, $filePath) if not -x $filePath;
+
+    if ($module eq 'test') {
+        command($filePath, 'test');
     } else {
-        say "\n## run ", join(",", @$_);
-
-        # mingwでビルドした linuxX64 バイナリはパーミッションが設定されていない
-        chmod(0755, $filePath) if not -x $filePath;
-
-        if ($module eq 'test') {
-            command($filePath, 'test');
-        } else {
-            command($filePath);
-        }
+        command($filePath);
     }
 }
 

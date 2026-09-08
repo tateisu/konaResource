@@ -22,4 +22,8 @@ static inline void kona_memcpy(void* destination, const void* source, size_t len
     memcpy(destination, source, length);
 }
 
+static inline void kona_memmove(void* destination, const void* source, size_t length) {
+    memmove(destination, source, length);
+}
+
 #endif

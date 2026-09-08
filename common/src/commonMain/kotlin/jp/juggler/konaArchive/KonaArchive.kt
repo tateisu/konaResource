@@ -95,7 +95,7 @@ class KonaArchiveFile(
         (compressedStart + compressedSize).toLong(),
     ).use { compressedRange ->
         compressedRange.seek(0L)
-        defaultLz4Codec.decompress(
+        defaultLz4Codec.decompressBuffer(
             expectedSize = uncompressedSize,
             output = callback,
             input = {

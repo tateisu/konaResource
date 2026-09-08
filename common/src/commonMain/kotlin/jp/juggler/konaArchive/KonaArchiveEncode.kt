@@ -115,7 +115,7 @@ private class WriteEnv(
 
         // 圧縮して書き出す
         entry.open().use { src ->
-            defaultLz4Codec.compress(
+            defaultLz4Codec.compressBuffer(
                 inputSize = uncompressedSize,
                 options = options,
                 // codecが入力バイト列を要求したら呼ばれる。

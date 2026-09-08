@@ -12,7 +12,7 @@
   - 大半のWindows PCのコードページはUTF-8ではない。
 
 ## benchmark CLI の 改善
-- benchmark CLI の 定数をArgParserで指定可能にする
+- [x] benchmark CLI の 定数をArgParserで指定可能にする
 - デフォルト値も直すsmoke用になってて、warmupが少ないし試験時間も短すぎる
 
 ## AGENTS.md の ビルドマトリクスを作成する

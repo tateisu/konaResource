@@ -11,7 +11,7 @@ open class KonaResourceExtension {
 
     var lz4CompressionLevel: Int = 0
     var lz4BlockSizeID: Int = 4 * 1024 * 1024
-    var lz4BlockMode: String = "LZ4F_blockLinked"
+    var lz4BlockMode: String = "LZ4F_blockIndependent"
     var lz4ContentSizeFlag: Boolean = true
     var lz4ContentChecksumFlag: Boolean = true
     var lz4blockChecksumFlag: Boolean = true

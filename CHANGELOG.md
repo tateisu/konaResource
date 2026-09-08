@@ -1,4 +1,9 @@
 ## works not tagged
+- The standalone benchmark CLI now accepts `--warmup` and `--time` options.
+- The standalone benchmark CLI now supports repeated measurement iterations and reports their standard deviation.
+- `runNativeBinary.pl` now lists native binary dynamic-library dependencies before execution.
+- Native LZ4 frame compression and decompression now reuse Kotlin/Native buffers and interop state across chunks.
+- LZ4 now defaults to independent blocks to favor decompression speed and align JVM and Native behavior.
 - Native SHA-256 implementations are now built as target-specific static libraries with CPU crypto instructions enabled.
 - `runNativeBinary.pl` now formats workflow elapsed time with hour and minute prefixes when applicable.
 - `runNativeBinary.pl` now detects the execution architecture when `--myArch` is omitted.

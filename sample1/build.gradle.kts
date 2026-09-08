@@ -21,7 +21,7 @@ konaResource {
 //    // LZ4F compression level. 0 is the default fast compression, positive values use LZ4HC, and negative values use fast acceleration.
 //    lz4CompressionLevel = 0
 //    lz4BlockSizeID = 1MB
-//    lz4BlockMode = "LZ4F_blockLinked"
+//    lz4BlockMode = "LZ4F_blockIndependent"
 //    lz4ContentSizeFlag = true
 //    lz4ContentChecksumFlag	= true
 //    lz4blockChecksumFlag = true
